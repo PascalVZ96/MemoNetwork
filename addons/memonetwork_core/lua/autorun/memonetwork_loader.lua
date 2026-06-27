@@ -1,0 +1,33 @@
+-- MemoNetwork Lite Loader
+
+MemoNetwork = MemoNetwork or {}
+
+local function AddClient(path)
+    if SERVER then
+        AddCSLuaFile(path)
+    else
+        include(path)
+    end
+end
+
+local function AddShared(path)
+    if SERVER then
+        AddCSLuaFile(path)
+    end
+    include(path)
+end
+
+AddShared("memonetwork/shared/sh_config.lua")
+AddShared("memonetwork/shared/sh_theme.lua")
+
+AddClient("memonetwork/client/cl_fonts.lua")
+AddClient("memonetwork/client/cl_hud.lua")
+AddClient("memonetwork/client/cl_voice.lua")
+AddClient("memonetwork/client/cl_scoreboard.lua")
+AddClient("memonetwork/client/cl_menu.lua")
+AddClient("memonetwork/client/cl_notifications.lua")
+
+if SERVER then
+    include("memonetwork/server/sv_commands.lua")
+    include("memonetwork/server/sv_welcome.lua")
+end
