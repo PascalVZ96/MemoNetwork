@@ -1,39 +1,13 @@
-# MemoNetwork Lite
+# MemoNetwork Alpha 6 HUD Map Fix
 
-A lightweight Garry's Mod Sandbox UI addon for a small private server.
+Fixes:
+- Map name no longer overflows outside the HUD.
+- HUD is slightly wider.
+- Player/map text is shortened with `...` when needed.
 
-## Install
+Install:
+Copy the `lua` folder into:
 
-Copy:
+`garrysmod/addons/memonetwork_core/`
 
-```text
-addons/memonetwork_core
-```
-
-to:
-
-```text
-garrysmod/addons/memonetwork_core
-```
-
-Restart the server.
-
-## Client controls
-
-Open the menu with:
-
-```text
-mn_menu
-```
-
-Recommended client bind:
-
-```text
-bind f1 mn_menu
-```
-
-Chat fallback:
-
-```text
-!menu
-```
+Overwrite existing files and restart the server.
