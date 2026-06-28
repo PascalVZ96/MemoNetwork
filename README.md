@@ -1,13 +1,13 @@
-# MemoNetwork Alpha 6 HUD Map Fix
+# MemoNetwork Scoreboard V2 Patch
 
-Fixes:
-- Map name no longer overflows outside the HUD.
-- HUD is slightly wider.
-- Player/map text is shortened with `...` when needed.
+Replace only this file:
 
-Install:
-Copy the `lua` folder into:
+`addons/memonetwork_core/lua/memonetwork/client/cl_scoreboard.lua`
 
-`garrysmod/addons/memonetwork_core/`
-
-Overwrite existing files and restart the server.
+Changes:
+- Steam avatars
+- Owner/Admin/Player rank display
+- Ping colors
+- Sorted players
+- Compact layout
+- Simple open/close fade animation
