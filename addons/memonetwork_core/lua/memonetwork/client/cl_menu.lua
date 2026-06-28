@@ -1,5 +1,5 @@
--- MemoNetwork Lite Dashboard V3
--- Cleaner header, aligned sidebar tiles and custom close button.
+-- MemoNetwork Lite Dashboard V3.1
+-- Fixes sidebar alignment and prevents buttons from overflowing outside the sidebar.
 
 local menu
 local activePage = "Home"
@@ -20,7 +20,7 @@ local function DrawCloseButton(btn, w, h)
     local bg = hover and Color(255, 170, 40, 255) or Color(20, 26, 34, 230)
 
     draw.RoundedBox(8, 0, 0, w, h, bg)
-    draw.SimpleText("X", "MN_Title", w / 2, h / 2, hover and Color(10, 10, 10) or Color(240, 240, 240), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText("X", "MN_Title", w / 2, h / 2 - 1, hover and Color(10, 10, 10) or Color(240, 240, 240), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 end
 
 local function Tile(parent, x, y, w, h, title, subtitle, accent, onClick)
@@ -41,9 +41,9 @@ local function Tile(parent, x, y, w, h, title, subtitle, accent, onClick)
         draw.RoundedBox(10, 0, 0, pw, ph, bg)
         draw.RoundedBox(8, 0, 0, 6 + self.HoverAmount * 4, ph, accent or theme.Orange)
 
-        -- Fixed alignment for every button
-        draw.SimpleText(title, "MN_Title", 20, 23, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText(subtitle, "MN_Small", 20, 50, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        -- Fixed, readable alignment
+        draw.SimpleText(title, "MN_Subtitle", 20, 20, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(subtitle, "MN_Small", 20, 42, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end
 
     btn.DoClick = function()
@@ -129,7 +129,7 @@ local function OpenMenu()
     local cfg = MemoNetwork.Config
     local sw, sh = ScrW(), ScrH()
 
-    local w, h = 820, 520
+    local w, h = 820, 540
 
     menu = vgui.Create("DFrame")
     menu:SetSize(w, h)
@@ -145,7 +145,6 @@ local function OpenMenu()
         draw.RoundedBox(14, 0, 0, pw, ph, theme.Background)
         draw.RoundedBoxEx(14, 0, 0, pw, 74, theme.Orange, true, true, false, false)
 
-        -- Header text left only, so it never sits behind the close button
         draw.SimpleText(cfg.ServerName, "MN_Title", 28, 26, Color(10, 10, 10), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         draw.SimpleText(cfg.Subtitle, "MN_Text", 28, 52, Color(25, 25, 25), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end
@@ -179,13 +178,18 @@ local function OpenMenu()
         {"Settings", "Client options"}
     }
 
-    local by = 16
+    local topPad = 14
+    local gap = 8
+    local buttonH = 52
+    local by = topPad
+
     for _, data in ipairs(buttons) do
-        Tile(sidebar, 16, by, 218, 56, data[1], data[2], theme.Orange, function()
+        Tile(sidebar, 16, by, 218, buttonH, data[1], data[2], theme.Orange, function()
             activePage = data[1]
             DrawPageContent(content, activePage)
         end)
-        by = by + 64
+
+        by = by + buttonH + gap
     end
 
     DrawPageContent(content, activePage)
@@ -193,12 +197,12 @@ end
 
 concommand.Add("mn_menu", OpenMenu)
 
-hook.Add("ShowHelp", "MemoNetwork_ShowHelp_DashboardV3", function()
+hook.Add("ShowHelp", "MemoNetwork_ShowHelp_DashboardV31", function()
     OpenMenu()
     return true
 end)
 
-hook.Add("OnPlayerChat", "MemoNetwork_MenuChat_DashboardV3", function(ply, text)
+hook.Add("OnPlayerChat", "MemoNetwork_MenuChat_DashboardV31", function(ply, text)
     if ply ~= LocalPlayer() then return end
 
     text = string.Trim(string.lower(text or ""))
