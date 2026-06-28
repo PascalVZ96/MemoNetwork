@@ -1,17 +1,30 @@
 -- MemoNetwork Lite Admin Tools
--- Alpha 11.1: admin actions, map changing, broadcasts, live logs and advanced cleanup.
+-- Alpha 11.2: permission-aware admin actions, map changing, broadcasts, live logs and advanced cleanup.
 
 util.AddNetworkString("MemoNetwork_AdminAction")
 util.AddNetworkString("MemoNetwork_AdminResult")
 util.AddNetworkString("MemoNetwork_AdminLog")
 util.AddNetworkString("MemoNetwork_Broadcast")
 
-local function IsAllowed(ply)
+local function HasPerm(ply, permission)
     if not IsValid(ply) or not ply:IsPlayer() then return false end
-    if MemoNetwork and MemoNetwork.Ranks and MemoNetwork.Ranks.CanAdmin then
-        return MemoNetwork.Ranks.CanAdmin(ply)
+    if MemoNetwork and MemoNetwork.Ranks and MemoNetwork.Ranks.HasPermission then
+        return MemoNetwork.Ranks.HasPermission(ply, permission)
     end
     return ply:IsAdmin()
+end
+
+local function IsAllowed(ply)
+    return HasPerm(ply, "admin.open")
+end
+
+local function RequirePerm(ply, permission)
+    if HasPerm(ply, permission) then return true end
+    net.Start("MemoNetwork_AdminResult")
+        net.WriteString("Missing permission: " .. permission)
+        net.WriteString("error")
+    net.Send(ply)
+    return false
 end
 
 local function SendResult(ply, message, kind)
@@ -59,21 +72,17 @@ end
 
 local function ReadOptionalTarget()
     local ok, target = pcall(net.ReadEntity)
-    if ok and IsValid(target) and target:IsPlayer() then
-        return target
-    end
+    if ok and IsValid(target) and target:IsPlayer() then return target end
 end
 
 local function RemoveMatching(predicate)
     local removed = 0
-
     for _, ent in ipairs(ents.GetAll()) do
         if IsValid(ent) and predicate(ent) then
             ent:Remove()
             removed = removed + 1
         end
     end
-
     return removed
 end
 
@@ -94,9 +103,7 @@ end
 
 hook.Add("PlayerInitialSpawn", "MemoNetwork_AdminLog_PlayerJoin", function(ply)
     timer.Simple(2, function()
-        if IsValid(ply) then
-            LogAdmin(nil, ply:Nick() .. " joined the server", "success")
-        end
+        if IsValid(ply) then LogAdmin(nil, ply:Nick() .. " joined the server", "success") end
     end)
 end)
 
@@ -113,67 +120,63 @@ net.Receive("MemoNetwork_AdminAction", function(_, ply)
     local action = net.ReadString()
 
     if action == "broadcast" then
+        if not RequirePerm(ply, "broadcast") then return end
         local message = net.ReadString()
-        if BroadcastMessage(ply, message) then
-            SendResult(ply, "Broadcast sent.", "success")
-        else
-            SendResult(ply, "Broadcast message is empty.", "error")
-        end
+        if BroadcastMessage(ply, message) then SendResult(ply, "Broadcast sent.", "success") else SendResult(ply, "Broadcast message is empty.", "error") end
         return
     end
 
     if action == "change_map" then
+        if not RequirePerm(ply, "map.change") then return end
         local mapName = net.ReadString()
-
-        if not IsKnownMap(mapName) then
-            SendResult(ply, "Map is not available: " .. mapName, "error")
-            return
-        end
-
+        if not IsKnownMap(mapName) then SendResult(ply, "Map is not available: " .. mapName, "error") return end
         SendResult(ply, "Changing map to " .. mapName .. "...", "warning")
         LogAdmin(ply, "changed map to " .. mapName, "warning")
-        timer.Simple(1, function()
-            RunConsoleCommand("changelevel", mapName)
-        end)
+        timer.Simple(1, function() RunConsoleCommand("changelevel", mapName) end)
         return
     end
 
     if action == "restart_map" then
+        if not RequirePerm(ply, "map.restart") then return end
         local current = game.GetMap()
         SendResult(ply, "Restarting " .. current .. "...", "warning")
         LogAdmin(ply, "restarted map " .. current, "warning")
-        timer.Simple(1, function()
-            RunConsoleCommand("changelevel", current)
-        end)
+        timer.Simple(1, function() RunConsoleCommand("changelevel", current) end)
         return
     end
 
     if action == "cleanup" then
+        if not RequirePerm(ply, "cleanup") then return end
         game.CleanUpMap(false)
         SendResult(ply, "Map cleanup completed.", "success")
         LogAdmin(ply, "cleaned up the map", "success")
         return
     elseif action == "cleanup_props" then
+        if not RequirePerm(ply, "cleanup") then return end
         local count = RemoveMatching(IsPlayerProp)
         SendResult(ply, "Removed " .. count .. " props.", "success")
         LogAdmin(ply, "removed " .. count .. " props", "success")
         return
     elseif action == "cleanup_vehicles" then
+        if not RequirePerm(ply, "cleanup") then return end
         local count = RemoveMatching(IsVehicle)
         SendResult(ply, "Removed " .. count .. " vehicles.", "success")
         LogAdmin(ply, "removed " .. count .. " vehicles", "success")
         return
     elseif action == "cleanup_npcs" then
+        if not RequirePerm(ply, "cleanup") then return end
         local count = RemoveMatching(function(ent) return ent:IsNPC() end)
         SendResult(ply, "Removed " .. count .. " NPCs.", "success")
         LogAdmin(ply, "removed " .. count .. " NPCs", "success")
         return
     elseif action == "cleanup_ragdolls" then
+        if not RequirePerm(ply, "cleanup") then return end
         local count = RemoveMatching(function(ent) return ent:GetClass() == "prop_ragdoll" end)
         SendResult(ply, "Removed " .. count .. " ragdolls.", "success")
         LogAdmin(ply, "removed " .. count .. " ragdolls", "success")
         return
     elseif action == "cleanup_effects" then
+        if not RequirePerm(ply, "cleanup") then return end
         local count = RemoveMatching(function(ent)
             local class = ent:GetClass()
             return class == "env_sprite" or class == "env_smoketrail" or class == "env_fire" or class == "env_explosion" or class == "info_particle_system"
@@ -182,6 +185,7 @@ net.Receive("MemoNetwork_AdminAction", function(_, ply)
         LogAdmin(ply, "removed " .. count .. " effects", "success")
         return
     elseif action == "cleanup_projectiles" then
+        if not RequirePerm(ply, "cleanup") then return end
         local count = RemoveMatching(IsProjectile)
         SendResult(ply, "Removed " .. count .. " projectiles.", "success")
         LogAdmin(ply, "removed " .. count .. " projectiles", "success")
@@ -191,61 +195,30 @@ net.Receive("MemoNetwork_AdminAction", function(_, ply)
     local target = ReadOptionalTarget()
 
     if action == "god" then
-        if ply:HasGodMode() then
-            ply:GodDisable()
-            SendResult(ply, "God mode disabled.", "warning")
-            LogAdmin(ply, "disabled god mode", "warning")
-        else
-            ply:GodEnable()
-            SendResult(ply, "God mode enabled.", "success")
-            LogAdmin(ply, "enabled god mode", "success")
-        end
+        if ply:HasGodMode() then ply:GodDisable() SendResult(ply, "God mode disabled.", "warning") LogAdmin(ply, "disabled god mode", "warning") else ply:GodEnable() SendResult(ply, "God mode enabled.", "success") LogAdmin(ply, "enabled god mode", "success") end
     elseif action == "noclip" then
-        if ply:GetMoveType() == MOVETYPE_NOCLIP then
-            ply:SetMoveType(MOVETYPE_WALK)
-            SendResult(ply, "Noclip disabled.", "warning")
-            LogAdmin(ply, "disabled noclip", "warning")
-        else
-            ply:SetMoveType(MOVETYPE_NOCLIP)
-            SendResult(ply, "Noclip enabled.", "success")
-            LogAdmin(ply, "enabled noclip", "success")
-        end
+        if ply:GetMoveType() == MOVETYPE_NOCLIP then ply:SetMoveType(MOVETYPE_WALK) SendResult(ply, "Noclip disabled.", "warning") LogAdmin(ply, "disabled noclip", "warning") else ply:SetMoveType(MOVETYPE_NOCLIP) SendResult(ply, "Noclip enabled.", "success") LogAdmin(ply, "enabled noclip", "success") end
     elseif action == "health" then
-        ply:SetHealth(100)
-        ply:SetArmor(100)
-        SendResult(ply, "Health and armor restored.", "success")
-        LogAdmin(ply, "restored health and armor", "success")
+        ply:SetHealth(100) ply:SetArmor(100) SendResult(ply, "Health and armor restored.", "success") LogAdmin(ply, "restored health and armor", "success")
     elseif action == "teleport" and IsValid(target) then
-        ply:SetPos(target:GetPos() + Vector(45, 0, 0))
-        SendResult(ply, "Teleported to " .. target:Nick() .. ".", "success")
-        LogAdmin(ply, "teleported to " .. target:Nick(), "info")
+        if not RequirePerm(ply, "players.manage") then return end
+        ply:SetPos(target:GetPos() + Vector(45, 0, 0)) SendResult(ply, "Teleported to " .. target:Nick() .. ".", "success") LogAdmin(ply, "teleported to " .. target:Nick(), "info")
     elseif action == "bring" and IsValid(target) then
-        target:SetPos(ply:GetPos() + ply:GetForward() * 80)
-        SendResult(ply, "Brought " .. target:Nick() .. ".", "success")
-        LogAdmin(ply, "brought " .. target:Nick(), "info")
+        if not RequirePerm(ply, "players.manage") then return end
+        target:SetPos(ply:GetPos() + ply:GetForward() * 80) SendResult(ply, "Brought " .. target:Nick() .. ".", "success") LogAdmin(ply, "brought " .. target:Nick(), "info")
     elseif action == "heal_target" and IsValid(target) then
-        target:SetHealth(100)
-        target:SetArmor(100)
-        SendResult(ply, "Healed " .. target:Nick() .. ".", "success")
-        LogAdmin(ply, "healed " .. target:Nick(), "success")
+        if not RequirePerm(ply, "players.manage") then return end
+        target:SetHealth(100) target:SetArmor(100) SendResult(ply, "Healed " .. target:Nick() .. ".", "success") LogAdmin(ply, "healed " .. target:Nick(), "success")
     elseif action == "freeze" and IsValid(target) then
-        target:SetMoveType(target:GetMoveType() == MOVETYPE_NONE and MOVETYPE_WALK or MOVETYPE_NONE)
-        SendResult(ply, "Toggled freeze for " .. target:Nick() .. ".", "success")
-        LogAdmin(ply, "toggled freeze for " .. target:Nick(), "warning")
+        if not RequirePerm(ply, "players.manage") then return end
+        target:SetMoveType(target:GetMoveType() == MOVETYPE_NONE and MOVETYPE_WALK or MOVETYPE_NONE) SendResult(ply, "Toggled freeze for " .. target:Nick() .. ".", "success") LogAdmin(ply, "toggled freeze for " .. target:Nick(), "warning")
     elseif action == "slay" and IsValid(target) then
-        target:Kill()
-        SendResult(ply, "Slayed " .. target:Nick() .. ".", "warning")
-        LogAdmin(ply, "slayed " .. target:Nick(), "warning")
+        if not RequirePerm(ply, "players.manage") then return end
+        target:Kill() SendResult(ply, "Slayed " .. target:Nick() .. ".", "warning") LogAdmin(ply, "slayed " .. target:Nick(), "warning")
     elseif action == "spectate" and IsValid(target) then
-        if ply == target then
-            SendResult(ply, "You cannot spectate yourself.", "warning")
-            return
-        end
-
-        ply:Spectate(OBS_MODE_IN_EYE)
-        ply:SpectateEntity(target)
-        SendResult(ply, "Spectating " .. target:Nick() .. ". Use noclip/spawn to return.", "success")
-        LogAdmin(ply, "started spectating " .. target:Nick(), "info")
+        if not RequirePerm(ply, "players.manage") then return end
+        if ply == target then SendResult(ply, "You cannot spectate yourself.", "warning") return end
+        ply:Spectate(OBS_MODE_IN_EYE) ply:SpectateEntity(target) SendResult(ply, "Spectating " .. target:Nick() .. ". Use noclip/spawn to return.", "success") LogAdmin(ply, "started spectating " .. target:Nick(), "info")
     else
         SendResult(ply, "Unknown admin action.", "error")
     end
