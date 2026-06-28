@@ -1,5 +1,5 @@
--- MemoNetwork Alpha 10.2 Player Inspector
--- Cleaner layout, aligned admin buttons and extra quick actions.
+-- MemoNetwork Alpha 10.3 Player Inspector
+-- Cleaner Sandbox layout: removed unused Team row and added Steam helpers.
 
 MemoNetwork = MemoNetwork or {}
 MemoNetwork.PlayerInspector = MemoNetwork.PlayerInspector or {}
@@ -17,13 +17,17 @@ local function IsAdminAllowed()
     return ply:IsAdmin()
 end
 
+local function Notify(message, kind, title)
+    if MemoNetwork.Notify then
+        MemoNetwork.Notify(message, kind or "info", title or "Player Inspector", 3)
+    end
+end
+
 local function SendAdminAction(action, target)
     if not IsValid(target) then return end
 
     if not IsAdminAllowed() then
-        if MemoNetwork.Notify then
-            MemoNetwork.Notify("Admin actions are owner/admin only.", "error", "Player Inspector", 3)
-        end
+        Notify("Admin actions are owner/admin only.", "error")
         return
     end
 
@@ -58,7 +62,6 @@ local function AdminButton(parent, x, y, w, h, title, subtitle, action, target)
 
     btn.Paint = function(self, pw, ph)
         self.HoverAmount = Lerp(FrameTime() * 10, self.HoverAmount or 0, self:IsHovered() and 1 or 0)
-
         local bg = Color(18 + self.HoverAmount * 10, 24 + self.HoverAmount * 10, 32 + self.HoverAmount * 10, 235)
         local barH = 4 + self.HoverAmount * 2
 
@@ -71,6 +74,30 @@ local function AdminButton(parent, x, y, w, h, title, subtitle, action, target)
     btn.DoClick = function()
         surface.PlaySound("buttons/button15.wav")
         SendAdminAction(action, target)
+    end
+
+    return btn
+end
+
+local function SmallButton(parent, x, y, w, h, title, onClick)
+    local theme = MemoNetwork.Theme
+    local btn = vgui.Create("DButton", parent)
+    btn:SetPos(x, y)
+    btn:SetSize(w, h)
+    btn:SetText("")
+    btn:SetCursor("hand")
+    btn.HoverAmount = 0
+
+    btn.Paint = function(self, pw, ph)
+        self.HoverAmount = Lerp(FrameTime() * 10, self.HoverAmount or 0, self:IsHovered() and 1 or 0)
+        local bg = Color(20 + self.HoverAmount * 10, 26 + self.HoverAmount * 10, 34 + self.HoverAmount * 10, 235)
+        draw.RoundedBox(8, 0, 0, pw, ph, bg)
+        draw.SimpleText(title, "MN_Text", pw / 2, ph / 2, theme.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    end
+
+    btn.DoClick = function()
+        surface.PlaySound("buttons/button15.wav")
+        if onClick then onClick() end
     end
 
     return btn
@@ -113,10 +140,11 @@ function MemoNetwork.PlayerInspector.Open(target)
     local theme = MemoNetwork.Theme
     local cfg = MemoNetwork.Config or {}
     local sw, sh = ScrW(), ScrH()
-    local w, h = 620, 520
+    local w, h = 620, 505
     local rank = MemoNetwork.Ranks and MemoNetwork.Ranks.Get(target) or {name = "PLAYER", color = theme.Text}
     local aliveText = target:Alive() and "Alive" or "Dead"
     local aliveColor = target:Alive() and (theme.Success or Color(75, 200, 120)) or Color(255, 90, 90)
+    local steamid = IsValid(target) and target:SteamID() or "Unknown"
 
     inspector = vgui.Create("DFrame")
     inspector:SetSize(w, h)
@@ -154,27 +182,38 @@ function MemoNetwork.PlayerInspector.Open(target)
         draw.RoundedBox(10, 0, 0, pw, ph, theme.PanelLight)
         draw.SimpleText(IsValid(target) and target:Nick() or "Unknown", "MN_Title", 18, 30, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         draw.SimpleText(rank.name or "PLAYER", "MN_Text", 18, 66, rank.color or theme.Orange, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText(IsValid(target) and target:SteamID() or "Unknown", "MN_Small", pw - 18, 66, theme.Muted, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(steamid, "MN_Small", pw - 18, 66, theme.Muted, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
     end
+
+    SmallButton(card, card:GetWide() - 224, 16, 98, 30, "Copy ID", function()
+        SetClipboardText(steamid)
+        Notify("SteamID copied.", "success")
+    end)
+
+    SmallButton(card, card:GetWide() - 116, 16, 98, 30, "Steam", function()
+        if IsValid(target) then
+            gui.OpenURL("https://steamcommunity.com/profiles/" .. target:SteamID64())
+            Notify("Steam profile opened.", "success")
+        end
+    end)
 
     local details = vgui.Create("DPanel", inspector)
     details:SetPos(24, 218)
-    details:SetSize(w - 48, 146)
+    details:SetSize(w - 48, 114)
     details.Paint = function(_, pw, ph)
         draw.RoundedBox(10, 0, 0, pw, ph, theme.PanelLight)
     end
 
     local ping = IsValid(target) and target:Ping() or 0
-    DetailLine(details, 16, "SteamID", IsValid(target) and target:SteamID() or "Unknown", theme.Text)
+    DetailLine(details, 16, "SteamID", steamid, theme.Text)
     DetailLine(details, 48, "Ping", ping .. " ms", MemoNetwork.Player and MemoNetwork.Player.GetPingColor(ping) or theme.Text)
     DetailLine(details, 80, "Status", aliveText, aliveColor)
-    DetailLine(details, 112, "Team", IsValid(target) and team.GetName(target:Team()) or "Unknown", theme.Text)
 
     if IsAdminAllowed() then
-        AddAdminActions(inspector, 384, target)
+        AddAdminActions(inspector, 352, target)
     else
         local info = vgui.Create("DPanel", inspector)
-        info:SetPos(24, 388)
+        info:SetPos(24, 352)
         info:SetSize(w - 48, 58)
         info.Paint = function(_, pw, ph)
             draw.RoundedBox(10, 0, 0, pw, ph, theme.Panel)
