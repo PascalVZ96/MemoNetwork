@@ -5,11 +5,12 @@ MemoNetwork.Config = MemoNetwork.Config or {}
 
 MemoNetwork.Config.ServerName = "MemoNetwork"
 MemoNetwork.Config.Subtitle = "Industrial Sandbox"
-MemoNetwork.Config.Version = "Alpha 11.5-dev"
+MemoNetwork.Config.Version = "Alpha 13.0-dev"
 
 MemoNetwork.Config.Website = "https://memocraft.nl"
 MemoNetwork.Config.Discord = "https://memocraft.nl/?c=Discord"
 MemoNetwork.Config.Workshop = "Coming soon"
+MemoNetwork.Config.NewsURL = "https://memocraft.nl/api/news.json"
 
 MemoNetwork.Config.Owners = {
     ["STEAM_0:1:69073790"] = true
