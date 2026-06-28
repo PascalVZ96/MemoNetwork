@@ -1,0 +1,20 @@
+// MemoNetwork server.cfg example
+// Copy the lines you need into your real Garry's Mod server.cfg.
+
+hostname "MemoNetwork | Industrial Sandbox"
+
+// Loading screen
+sv_loadingurl "https://memocraft.nl/loading/index.html?steamid=%s&map=%m"
+
+// Sandbox basics
+sbox_allownpcs 1
+sbox_godmode 0
+sbox_playershurtplayers 0
+sbox_maxprops 150
+sbox_maxragdolls 10
+sbox_maxvehicles 10
+sbox_maxeffects 20
+sbox_maxnpcs 20
+
+// Workshop collection example
+// host_workshop_collection "YOUR_COLLECTION_ID_HERE"
