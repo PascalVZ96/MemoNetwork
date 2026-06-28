@@ -1,4 +1,4 @@
--- MemoNetwork Alpha 15 Loader
+-- MemoNetwork Alpha 15.2 Loader
 
 MemoNetwork = MemoNetwork or {}
 
@@ -44,6 +44,8 @@ AddClient("memonetwork/client/cl_links.lua")
 AddClient("memonetwork/client/cl_version.lua")
 AddClient("memonetwork/client/cl_events.lua")
 AddClient("memonetwork/client/cl_join_intro.lua")
+AddClient("memonetwork/client/cl_addon_detector.lua")
+AddClient("memonetwork/client/cl_spectate_hud.lua")
 AddClient("memonetwork/client/cl_build_assistant.lua")
 AddClient("memonetwork/client/cl_admin.lua")
 
