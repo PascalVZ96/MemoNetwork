@@ -1,5 +1,5 @@
--- MemoNetwork Lite Notifications V2
--- Reusable notification/toast system for MemoNetwork.
+-- MemoNetwork Lite Notifications V2.1
+-- UI polish: max 3 visible notifications and shorter default duration.
 
 MemoNetwork = MemoNetwork or {}
 MemoNetwork.Notifications = MemoNetwork.Notifications or {}
@@ -34,10 +34,14 @@ function MemoNetwork.Notifications.Add(message, kind, title, duration)
         kind = kind,
         color = data.color,
         start = CurTime(),
-        duration = duration or 4,
+        duration = duration or 3,
         xOffset = 320,
         alpha = 0
     })
+
+    while #notes > 6 do
+        table.remove(notes)
+    end
 end
 
 function MemoNetwork.Notify(message, kind, title, duration)
@@ -56,7 +60,6 @@ local function DrawNotification(n, index)
 
     local x = targetX + n.xOffset
     local y = targetY
-
     local alpha = math.Clamp(n.alpha, 0, 255)
 
     draw.RoundedBox(10, x, y, w, h, Color(12, 16, 22, math.min(alpha, 230)))
@@ -66,7 +69,7 @@ local function DrawNotification(n, index)
     draw.SimpleText(n.message, "MN_Text", x + 20, y + 49, Color(175, 180, 190, alpha), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 end
 
-hook.Add("HUDPaint", "MemoNetwork_NotificationsV2", function()
+hook.Add("HUDPaint", "MemoNetwork_NotificationsV21", function()
     for i = #notes, 1, -1 do
         local n = notes[i]
         local age = CurTime() - n.start
@@ -82,17 +85,17 @@ hook.Add("HUDPaint", "MemoNetwork_NotificationsV2", function()
     end
 
     for i, n in ipairs(notes) do
-        if i <= 5 then
+        if i <= 3 then
             DrawNotification(n, i)
         end
     end
 end)
 
-hook.Add("InitPostEntity", "MemoNetwork_WelcomeNotificationV2", function()
+hook.Add("InitPostEntity", "MemoNetwork_WelcomeNotificationV21", function()
     timer.Simple(2, function()
         local ply = LocalPlayer()
         local name = IsValid(ply) and ply:Nick() or "Builder"
 
-        MemoNetwork.Notify("Welcome " .. name, "success", "MemoNetwork", 5)
+        MemoNetwork.Notify("Welcome " .. name, "success", "MemoNetwork", 4)
     end)
 end)

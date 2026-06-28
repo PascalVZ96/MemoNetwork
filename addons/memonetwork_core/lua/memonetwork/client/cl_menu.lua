@@ -1,5 +1,5 @@
--- MemoNetwork Lite Dashboard V3.4
--- Adds Home quick actions, server status and notification integration.
+-- MemoNetwork Lite Dashboard V3.5
+-- UI polish: larger subtitles, cleaner Home status and better button readability.
 
 local menu
 local activePage = "Home"
@@ -35,14 +35,6 @@ local function CloseMenu()
     end
 end
 
-local function DrawCloseButton(btn, w, h)
-    local hover = btn:IsHovered()
-    local bg = hover and Color(255, 170, 40, 255) or Color(20, 26, 34, 230)
-
-    draw.RoundedBox(8, 0, 0, w, h, bg)
-    draw.SimpleText("X", "MN_Title", w / 2, h / 2 - 1, hover and Color(10, 10, 10) or Color(240, 240, 240), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-end
-
 local function Tile(parent, x, y, w, h, title, subtitle, accent, onClick)
     local theme = MemoNetwork.Theme
 
@@ -61,8 +53,8 @@ local function Tile(parent, x, y, w, h, title, subtitle, accent, onClick)
         draw.RoundedBox(10, 0, 0, pw, ph, bg)
         draw.RoundedBox(8, 0, 0, 6 + self.HoverAmount * 4, ph, accent or theme.Orange)
 
-        draw.SimpleText(title, "MN_Subtitle", 20, 20, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText(subtitle, "MN_Small", 20, 42, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(title, "MN_Subtitle", 20, 19, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(subtitle, "MN_Text", 20, 43, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end
 
     btn.DoClick = function()
@@ -91,7 +83,7 @@ local function ActionButton(parent, x, y, w, h, title, subtitle, onClick)
         draw.RoundedBox(8, 0, ph - 5, pw, 5, theme.Orange)
 
         draw.SimpleText(title, "MN_Subtitle", 16, 22, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText(subtitle, "MN_Small", 16, 47, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(subtitle, "MN_Text", 16, 50, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end
 
     btn.DoClick = function()
@@ -127,11 +119,25 @@ local function AddToggle(parent, x, y, label, key)
     end
 end
 
+local function StatusBox(parent, x, y, w, h, label, value)
+    local theme = MemoNetwork.Theme
+
+    local box = vgui.Create("DPanel", parent)
+    box:SetPos(x, y)
+    box:SetSize(w, h)
+    box.Paint = function(_, pw, ph)
+        draw.RoundedBox(10, 0, 0, pw, ph, theme.Panel)
+        draw.SimpleText(string.upper(label), "MN_Small", 16, 18, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(value, "MN_Subtitle", 16, 45, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    end
+
+    return box
+end
+
 local function DrawHome(parent)
     local theme = MemoNetwork.Theme
     local cfg = MemoNetwork.Config
     local ply = LocalPlayer()
-
     local width = parent:GetWide()
 
     local intro = vgui.Create("DPanel", parent)
@@ -143,37 +149,30 @@ local function DrawHome(parent)
         draw.SimpleText(cfg.Subtitle .. " - build, experiment and have fun.", "MN_Text", 24, 66, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end
 
-    ActionButton(parent, 0, 116, 158, 72, "Website", "Open website", function()
+    ActionButton(parent, 0, 116, 158, 76, "Website", "Open website", function()
         OpenURL("Website", cfg.Website)
     end)
 
-    ActionButton(parent, 176, 116, 158, 72, "Discord", "Open Discord", function()
+    ActionButton(parent, 176, 116, 158, 76, "Discord", "Open Discord", function()
         OpenURL("Discord", cfg.Discord)
     end)
 
-    ActionButton(parent, 352, 116, 158, 72, "Workshop", "Required addons", function()
+    ActionButton(parent, 352, 116, 158, 76, "Workshop", "Required addons", function()
         OpenURL("Workshop", cfg.Workshop)
     end)
 
     local status = vgui.Create("DPanel", parent)
-    status:SetPos(0, 206)
-    status:SetSize(width, 150)
+    status:SetPos(0, 214)
+    status:SetSize(width, 180)
     status.Paint = function(_, w, h)
         draw.RoundedBox(12, 0, 0, w, h, theme.PanelLight)
         draw.SimpleText("Server Status", "MN_Title", 24, 30, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-
-        local ping = IsValid(ply) and ply:Ping() or 0
-        local players = #player.GetAll() .. "/" .. game.MaxPlayers()
-
-        draw.SimpleText("Map", "MN_Text", 24, 72, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText(game.GetMap(), "MN_Text", 150, 72, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-
-        draw.SimpleText("Players", "MN_Text", 24, 102, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText(players, "MN_Text", 150, 102, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-
-        draw.SimpleText("Ping", "MN_Text", 24, 132, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText(ping .. " ms", "MN_Text", 150, 132, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end
+
+    local ping = IsValid(ply) and ply:Ping() or 0
+    StatusBox(status, 24, 64, 145, 78, "Map", game.GetMap())
+    StatusBox(status, 184, 64, 145, 78, "Players", #player.GetAll() .. " / " .. game.MaxPlayers())
+    StatusBox(status, 344, 64, 145, 78, "Ping", ping .. " ms")
 end
 
 local function DrawPageContent(panel, page)
@@ -345,12 +344,12 @@ end
 
 concommand.Add("mn_menu", OpenMenu)
 
-hook.Add("ShowHelp", "MemoNetwork_ShowHelp_QuickActions", function()
+hook.Add("ShowHelp", "MemoNetwork_ShowHelp_UIPolish831", function()
     OpenMenu()
     return true
 end)
 
-hook.Add("OnPlayerChat", "MemoNetwork_MenuChat_QuickActions", function(ply, text)
+hook.Add("OnPlayerChat", "MemoNetwork_MenuChat_UIPolish831", function(ply, text)
     if ply ~= LocalPlayer() then return end
 
     text = string.Trim(string.lower(text or ""))
