@@ -6,8 +6,8 @@ MemoNetwork.Config = MemoNetwork.Config or {}
 MemoNetwork.Config.ServerName = "MemoNetwork"
 MemoNetwork.Config.Subtitle = "Industrial Sandbox"
 
-MemoNetwork.Config.Website = "https://memonetwork.nl"
-MemoNetwork.Config.Discord = "Coming soon"
+MemoNetwork.Config.Website = "https://memocraft.nl"
+MemoNetwork.Config.Discord = "https://memocraft.nl/?c=Discord"
 MemoNetwork.Config.Workshop = "Coming soon"
 
 MemoNetwork.Config.ShowFPS = true

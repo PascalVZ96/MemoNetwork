@@ -5,10 +5,10 @@ local responses = {
     ["/rules"] = "Rules: Be respectful, no griefing, and clean up your builds.",
     ["!build"] = "Build Guide: Use Precision Tool, SmartSnap and Advanced Duplicator 2.",
     ["/build"] = "Build Guide: Use Precision Tool, SmartSnap and Advanced Duplicator 2.",
-    ["!discord"] = "Discord: Coming soon.",
-    ["/discord"] = "Discord: Coming soon.",
-    ["!website"] = "Website: https://memonetwork.nl",
-    ["/website"] = "Website: https://memonetwork.nl",
+    ["!discord"] = "Discord: https://memocraft.nl/?c=Discord",
+    ["/discord"] = "Discord: https://memocraft.nl/?c=Discord",
+    ["!website"] = "Website: https://memocraft.nl",
+    ["/website"] = "Website: https://memocraft.nl",
     ["!workshop"] = "Workshop: Coming soon.",
     ["/workshop"] = "Workshop: Coming soon."
 }
