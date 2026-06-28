@@ -21,11 +21,13 @@ AddShared("memonetwork/shared/sh_config.lua")
 AddShared("memonetwork/shared/sh_theme.lua")
 
 AddClient("memonetwork/client/cl_fonts.lua")
+AddClient("memonetwork/client/cl_settings.lua")
 AddClient("memonetwork/client/cl_hud.lua")
 AddClient("memonetwork/client/cl_voice.lua")
 AddClient("memonetwork/client/cl_scoreboard.lua")
 AddClient("memonetwork/client/cl_menu.lua")
 AddClient("memonetwork/client/cl_notifications.lua")
+AddClient("memonetwork/client/cl_links.lua")
 
 if SERVER then
     include("memonetwork/server/sv_commands.lua")

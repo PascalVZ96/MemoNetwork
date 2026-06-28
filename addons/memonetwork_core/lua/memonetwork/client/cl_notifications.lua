@@ -7,25 +7,23 @@ MemoNetwork.Notifications = MemoNetwork.Notifications or {}
 local notes = {}
 
 local TYPES = {
-    info = {
-        color = Color(80, 160, 255),
-        title = "Info"
-    },
-    success = {
-        color = Color(90, 220, 120),
-        title = "Success"
-    },
-    warning = {
-        color = Color(255, 190, 80),
-        title = "Warning"
-    },
-    error = {
-        color = Color(255, 90, 90),
-        title = "Error"
-    }
+    info = {color = Color(80, 160, 255), title = "Info"},
+    success = {color = Color(90, 220, 120), title = "Success"},
+    warning = {color = Color(255, 190, 80), title = "Warning"},
+    error = {color = Color(255, 90, 90), title = "Error"}
 }
 
+local function Setting(key, fallback)
+    if MemoNetwork.Settings and MemoNetwork.Settings.Get then
+        return MemoNetwork.Settings.Get(key)
+    end
+
+    return fallback
+end
+
 function MemoNetwork.Notifications.Add(message, kind, title, duration)
+    if not Setting("notifications", true) then return end
+
     kind = string.lower(kind or "info")
 
     local data = TYPES[kind] or TYPES.info
@@ -42,15 +40,12 @@ function MemoNetwork.Notifications.Add(message, kind, title, duration)
     })
 end
 
--- Short helper aliases
 function MemoNetwork.Notify(message, kind, title, duration)
     MemoNetwork.Notifications.Add(message, kind, title, duration)
 end
 
 local function DrawNotification(n, index)
-    local theme = MemoNetwork.Theme
     local sw = ScrW()
-
     local w = 330
     local h = 72
     local targetX = sw - w - 24

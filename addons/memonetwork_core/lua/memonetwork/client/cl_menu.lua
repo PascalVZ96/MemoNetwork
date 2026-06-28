@@ -1,5 +1,5 @@
--- MemoNetwork Lite Dashboard V3.2
--- Adds clickable Website/Discord links via gui.OpenURL.
+-- MemoNetwork Lite Dashboard V3.3
+-- Adds functional Settings page.
 
 local menu
 local activePage = "Home"
@@ -58,6 +58,31 @@ local function Tile(parent, x, y, w, h, title, subtitle, accent, onClick)
     return btn
 end
 
+local function AddToggle(parent, x, y, label, key)
+    local theme = MemoNetwork.Theme
+
+    local btn = vgui.Create("DButton", parent)
+    btn:SetPos(x, y)
+    btn:SetSize(parent:GetWide() - 48, 42)
+    btn:SetText("")
+
+    btn.Paint = function(_, w, h)
+        local enabled = MemoNetwork.Settings and MemoNetwork.Settings.Get and MemoNetwork.Settings.Get(key)
+        local accent = enabled and theme.Success or Color(255, 90, 90)
+
+        draw.RoundedBox(8, 0, 0, w, h, theme.Panel)
+        draw.RoundedBox(6, 12, 11, 20, 20, accent)
+        draw.SimpleText(label, "MN_Text", 46, h / 2, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(enabled and "ON" or "OFF", "MN_Text", w - 18, h / 2, accent, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+    end
+
+    btn.DoClick = function()
+        if MemoNetwork.Settings and MemoNetwork.Settings.Toggle then
+            MemoNetwork.Settings.Toggle(key)
+        end
+    end
+end
+
 local function DrawPageContent(panel, page)
     panel:Clear()
 
@@ -69,6 +94,12 @@ local function DrawPageContent(panel, page)
     content:SetSize(panel:GetWide(), panel:GetTall())
     content.Paint = function(_, w, h)
         draw.RoundedBox(12, 0, 0, w, h, theme.PanelLight)
+
+        if page == "Settings" then
+            draw.SimpleText("Settings", "MN_Title", 24, 30, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText("These settings are saved locally on your client.", "MN_Text", 24, 64, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            return
+        end
 
         local title = page
         local lines = {}
@@ -105,12 +136,6 @@ local function DrawPageContent(panel, page)
         elseif page == "Website" then
             title = "Website"
             lines = {cfg.Website or "Coming soon.", "", "Click this panel to open the website."}
-        elseif page == "Settings" then
-            title = "Settings"
-            lines = {
-                "Settings will be added later.",
-                "For now, use console command mn_menu or chat command !menu."
-            }
         end
 
         draw.SimpleText(title, "MN_Title", 24, 30, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
@@ -120,6 +145,15 @@ local function DrawPageContent(panel, page)
             draw.SimpleText(line, "MN_Text", 24, y, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
             y = y + 30
         end
+    end
+
+    if page == "Settings" then
+        AddToggle(content, 24, 96, "Show HUD", "hud")
+        AddToggle(content, 24, 146, "Show Voice HUD", "voice")
+        AddToggle(content, 24, 196, "Show Notifications", "notifications")
+        AddToggle(content, 24, 246, "Show FPS", "fps")
+        AddToggle(content, 24, 296, "Show Ping", "ping")
+        AddToggle(content, 24, 346, "Show Player Count", "players")
     end
 
     content.OnMousePressed = function()
@@ -219,12 +253,12 @@ end
 
 concommand.Add("mn_menu", OpenMenu)
 
-hook.Add("ShowHelp", "MemoNetwork_ShowHelp_DashboardV32", function()
+hook.Add("ShowHelp", "MemoNetwork_ShowHelp_DashboardV33", function()
     OpenMenu()
     return true
 end)
 
-hook.Add("OnPlayerChat", "MemoNetwork_MenuChat_DashboardV32", function(ply, text)
+hook.Add("OnPlayerChat", "MemoNetwork_MenuChat_DashboardV33", function(ply, text)
     if ply ~= LocalPlayer() then return end
 
     text = string.Trim(string.lower(text or ""))

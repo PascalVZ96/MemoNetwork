@@ -1,6 +1,15 @@
 -- MemoNetwork Lite Voice HUD
+-- Supports client settings.
 
 local speakers = {}
+
+local function Setting(key, fallback)
+    if MemoNetwork.Settings and MemoNetwork.Settings.Get then
+        return MemoNetwork.Settings.Get(key)
+    end
+
+    return fallback
+end
 
 hook.Add("PlayerStartVoice", "MemoNetwork_VoiceStart", function(ply)
     if IsValid(ply) and ply:IsPlayer() then
@@ -34,6 +43,8 @@ hook.Add("InitPostEntity", "MemoNetwork_DisableDefaultVoicePanel", function()
 end)
 
 hook.Add("HUDPaint", "MemoNetwork_VoiceHUD", function()
+    if not Setting("voice", true) then return end
+
     local active = {}
 
     for ply in pairs(speakers) do

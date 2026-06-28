@@ -1,5 +1,5 @@
 -- MemoNetwork Lite HUD
--- Patch: fixes bottom info box overflow by increasing HUD height and spacing.
+-- Supports client settings.
 
 hook.Add("HUDShouldDraw", "MemoNetwork_HideDefaultHUD", function(name)
     local hidden = {
@@ -12,6 +12,14 @@ end)
 
 local smoothHealth = 100
 local smoothArmor = 0
+
+local function Setting(key, fallback)
+    if MemoNetwork.Settings and MemoNetwork.Settings.Get then
+        return MemoNetwork.Settings.Get(key)
+    end
+
+    return fallback
+end
 
 local function FitText(text, font, maxWidth)
     text = tostring(text or "")
@@ -39,6 +47,8 @@ local function DrawBar(x, y, w, h, frac, color)
 end
 
 hook.Add("HUDPaint", "MemoNetwork_HUD", function()
+    if not Setting("hud", true) then return end
+
     local ply = LocalPlayer()
     if not IsValid(ply) then return end
 
@@ -60,7 +70,7 @@ hook.Add("HUDPaint", "MemoNetwork_HUD", function()
 
     draw.SimpleText(cfg.ServerName, "MN_Title", x + pad, y + 21, Color(10, 10, 10), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
-    if cfg.ShowFPS then
+    if cfg.ShowFPS and Setting("fps", true) then
         draw.SimpleText(math.floor(1 / FrameTime()) .. " FPS", "MN_Small", x + w - pad, y + 22, Color(10, 10, 10), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
     end
 
@@ -84,11 +94,17 @@ hook.Add("HUDPaint", "MemoNetwork_HUD", function()
     draw.RoundedBox(8, boxX, boxY, boxW, boxH, theme.PanelLight)
 
     local rightText = ""
-    if cfg.ShowPing then
+
+    if cfg.ShowPing and Setting("ping", true) then
         rightText = ply:Ping() .. " ms"
     end
-    if cfg.ShowPlayers then
-        rightText = rightText .. "  |  " .. #player.GetAll() .. "/" .. game.MaxPlayers()
+
+    if cfg.ShowPlayers and Setting("players", true) then
+        if rightText ~= "" then
+            rightText = rightText .. "  |  "
+        end
+
+        rightText = rightText .. #player.GetAll() .. "/" .. game.MaxPlayers()
     end
 
     local rightWidth = 128
