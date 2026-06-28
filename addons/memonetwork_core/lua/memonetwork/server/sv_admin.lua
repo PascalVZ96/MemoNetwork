@@ -1,5 +1,5 @@
 -- MemoNetwork Lite Admin Tools
--- Alpha 10.1: supports self actions and basic target actions from Player Inspector.
+-- Alpha 10.2: supports self actions and target actions from Player Inspector.
 
 util.AddNetworkString("MemoNetwork_AdminAction")
 util.AddNetworkString("MemoNetwork_AdminResult")
@@ -71,6 +71,18 @@ net.Receive("MemoNetwork_AdminAction", function(_, ply)
     elseif action == "freeze" and IsValid(target) then
         target:SetMoveType(target:GetMoveType() == MOVETYPE_NONE and MOVETYPE_WALK or MOVETYPE_NONE)
         SendResult(ply, "Toggled freeze for " .. target:Nick() .. ".", "success")
+    elseif action == "slay" and IsValid(target) then
+        target:Kill()
+        SendResult(ply, "Slayed " .. target:Nick() .. ".", "warning")
+    elseif action == "spectate" and IsValid(target) then
+        if ply == target then
+            SendResult(ply, "You cannot spectate yourself.", "warning")
+            return
+        end
+
+        ply:Spectate(OBS_MODE_IN_EYE)
+        ply:SpectateEntity(target)
+        SendResult(ply, "Spectating " .. target:Nick() .. ". Use noclip/spawn to return.", "success")
     else
         SendResult(ply, "Unknown admin action.", "error")
     end
