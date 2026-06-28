@@ -1,5 +1,5 @@
 -- MemoNetwork Lite Scoreboard V2
--- Compact scoreboard with avatars, rank display, ping colors and sorted players.
+-- Patch: fixes rank text clipping and improves row spacing.
 
 local board
 local playerList
@@ -30,20 +30,14 @@ end
 
 local function GetSortWeight(ply)
     local rank = select(1, GetRank(ply))
-
     if rank == "Owner" then return 1 end
     if rank == "Admin" then return 2 end
-
     return 3
 end
 
 local function PingColor(ping)
-    if ping <= 50 then
-        return Color(90, 220, 120)
-    elseif ping <= 100 then
-        return Color(255, 190, 80)
-    end
-
+    if ping <= 50 then return Color(90, 220, 120) end
+    if ping <= 100 then return Color(255, 190, 80) end
     return Color(255, 90, 90)
 end
 
@@ -52,11 +46,9 @@ local function SortedPlayers()
 
     table.sort(players, function(a, b)
         local wa, wb = GetSortWeight(a), GetSortWeight(b)
-
         if wa == wb then
             return string.lower(a:Nick()) < string.lower(b:Nick())
         end
-
         return wa < wb
     end)
 
@@ -79,12 +71,12 @@ local function BuildPlayerList(parent)
     for _, ply in ipairs(SortedPlayers()) do
         local row = vgui.Create("DPanel", playerList)
         row:SetPos(0, y)
-        row:SetSize(w - 44, 54)
+        row:SetSize(w - 44, 62)
 
         local avatar = vgui.Create("AvatarImage", row)
-        avatar:SetSize(36, 36)
-        avatar:SetPos(10, 9)
-        avatar:SetPlayer(ply, 36)
+        avatar:SetSize(40, 40)
+        avatar:SetPos(10, 11)
+        avatar:SetPlayer(ply, 40)
 
         row.Paint = function(_, rw, rh)
             local rankText, rankColor = GetRank(ply)
@@ -92,13 +84,13 @@ local function BuildPlayerList(parent)
 
             draw.RoundedBox(8, 0, 0, rw, rh, theme.PanelLight or Color(30, 38, 48, 220))
 
-            draw.SimpleText(IsValid(ply) and ply:Nick() or "Unknown", "MN_Text", 58, 17, theme.Text or color_white, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-            draw.SimpleText(rankText, "MN_Small", 58, 36, rankColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText(IsValid(ply) and ply:Nick() or "Unknown", "MN_Text", 62, 22, theme.Text or color_white, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText(rankText, "MN_Small", 62, 43, rankColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
             draw.SimpleText(ping .. " ms", "MN_Text", rw - 16, rh / 2, PingColor(ping), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
         end
 
-        y = y + 62
+        y = y + 70
     end
 end
 
@@ -120,7 +112,7 @@ local function OpenScoreboard()
     local theme = MemoNetwork.Theme
     local sw, sh = ScrW(), ScrH()
 
-    local w = 620
+    local w = 640
     local h = math.min(460, sh - 160)
 
     board = vgui.Create("DFrame")
@@ -151,20 +143,4 @@ end)
 hook.Add("ScoreboardHide", "MemoNetwork_ScoreboardHide_V2", function()
     CloseScoreboard()
     return false
-end)
-
-hook.Add("PlayerConnect", "MemoNetwork_ScoreboardRefreshConnect", function()
-    timer.Simple(1, function()
-        if IsValid(board) then
-            BuildPlayerList(board)
-        end
-    end)
-end)
-
-hook.Add("PlayerDisconnected", "MemoNetwork_ScoreboardRefreshDisconnect", function()
-    timer.Simple(0.2, function()
-        if IsValid(board) then
-            BuildPlayerList(board)
-        end
-    end)
 end)

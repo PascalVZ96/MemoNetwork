@@ -1,5 +1,5 @@
 -- MemoNetwork Lite HUD
--- Patch: fixes map name overflowing outside the HUD by clipping/shortening text.
+-- Patch: fixes bottom info box overflow by increasing HUD height and spacing.
 
 hook.Add("HUDShouldDraw", "MemoNetwork_HideDefaultHUD", function(name)
     local hidden = {
@@ -17,20 +17,14 @@ local function FitText(text, font, maxWidth)
     text = tostring(text or "")
 
     surface.SetFont(font)
-    local w = surface.GetTextSize(text)
-
-    if w <= maxWidth then
-        return text
-    end
+    if surface.GetTextSize(text) <= maxWidth then return text end
 
     local suffix = "..."
     local suffixW = surface.GetTextSize(suffix)
 
     for i = #text, 1, -1 do
         local part = string.sub(text, 1, i)
-        local partW = surface.GetTextSize(part)
-
-        if partW + suffixW <= maxWidth then
+        if surface.GetTextSize(part) + suffixW <= maxWidth then
             return part .. suffix
         end
     end
@@ -40,7 +34,6 @@ end
 
 local function DrawBar(x, y, w, h, frac, color)
     frac = math.Clamp(frac, 0, 1)
-
     draw.RoundedBox(5, x, y, w, h, Color(35, 42, 52, 230))
     draw.RoundedBox(5, x, y, w * frac, h, color)
 end
@@ -59,7 +52,7 @@ hook.Add("HUDPaint", "MemoNetwork_HUD", function()
     smoothArmor = Lerp(FrameTime() * 8, smoothArmor, armor)
 
     local x, y = 24, 24
-    local w, h = 360, 200
+    local w, h = 380, 245
     local pad = 18
 
     draw.RoundedBox(12, x, y, w, h, theme.Background)
@@ -77,33 +70,31 @@ hook.Add("HUDPaint", "MemoNetwork_HUD", function()
     draw.SimpleText(tostring(hp), "MN_Text", x + w - pad, cy, theme.Text, TEXT_ALIGN_RIGHT)
     DrawBar(x + pad, cy + 24, w - pad * 2, 10, smoothHealth / 100, theme.Health)
 
-    cy = cy + 48
+    cy = cy + 52
 
     draw.SimpleText("Armor", "MN_Text", x + pad, cy, theme.Text, TEXT_ALIGN_LEFT)
     draw.SimpleText(tostring(armor), "MN_Text", x + w - pad, cy, theme.Text, TEXT_ALIGN_RIGHT)
     DrawBar(x + pad, cy + 24, w - pad * 2, 10, smoothArmor / 100, theme.Armor)
 
-    cy = cy + 52
+    local boxX = x + pad
+    local boxY = y + 168
+    local boxW = w - pad * 2
+    local boxH = 58
 
-    draw.RoundedBox(8, x + pad, cy - 5, w - pad * 2, 52, theme.PanelLight)
+    draw.RoundedBox(8, boxX, boxY, boxW, boxH, theme.PanelLight)
 
     local rightText = ""
     if cfg.ShowPing then
         rightText = ply:Ping() .. " ms"
     end
-
     if cfg.ShowPlayers then
         rightText = rightText .. "  |  " .. #player.GetAll() .. "/" .. game.MaxPlayers()
     end
 
-    local rightWidth = 105
-    local leftMaxWidth = (w - pad * 2) - rightWidth - 22
+    local rightWidth = 128
+    local leftMaxWidth = boxW - rightWidth - 26
 
-    local nick = FitText(ply:Nick(), "MN_Text", leftMaxWidth)
-    local mapName = FitText(game.GetMap(), "MN_Small", leftMaxWidth)
-
-    draw.SimpleText(nick, "MN_Text", x + pad + 10, cy + 10, theme.Text, TEXT_ALIGN_LEFT)
-    draw.SimpleText(mapName, "MN_Small", x + pad + 10, cy + 32, theme.Muted, TEXT_ALIGN_LEFT)
-
-    draw.SimpleText(rightText, "MN_Small", x + w - pad - 10, cy + 32, theme.Muted, TEXT_ALIGN_RIGHT)
+    draw.SimpleText(FitText(ply:Nick(), "MN_Text", leftMaxWidth), "MN_Text", boxX + 12, boxY + 18, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    draw.SimpleText(FitText(game.GetMap(), "MN_Small", leftMaxWidth), "MN_Small", boxX + 12, boxY + 40, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    draw.SimpleText(rightText, "MN_Small", boxX + boxW - 12, boxY + 40, theme.Muted, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
 end)
