@@ -1,5 +1,5 @@
--- MemoNetwork Alpha 11 Admin Panel
--- F6 admin dashboard with tools, players, maps, broadcast and live logs.
+-- MemoNetwork Alpha 11.1 Admin Panel
+-- F6 admin dashboard with tools, players, maps, broadcast, live logs and confirmations.
 
 MemoNetwork = MemoNetwork or {}
 MemoNetwork.Admin = MemoNetwork.Admin or {}
@@ -30,6 +30,59 @@ local function SendAction(action, payload)
         net.WriteString(action)
         if payload then net.WriteString(payload) end
     net.SendToServer()
+end
+
+local function Confirm(title, text, confirmText, onConfirm)
+    local theme = MemoNetwork.Theme
+    local sw, sh = ScrW(), ScrH()
+    local w, h = 430, 210
+
+    local frame = vgui.Create("DFrame")
+    frame:SetSize(w, h)
+    frame:SetPos((sw - w) / 2, (sh - h) / 2)
+    frame:SetTitle("")
+    frame:SetDraggable(false)
+    frame:ShowCloseButton(false)
+    frame:MakePopup()
+    frame:SetAlpha(0)
+    frame:AlphaTo(255, 0.10, 0)
+
+    frame.Paint = function(_, pw, ph)
+        draw.RoundedBox(14, 0, 0, pw, ph, theme.Background)
+        draw.RoundedBoxEx(14, 0, 0, pw, 62, theme.Orange, true, true, false, false)
+        draw.SimpleText(title, "MN_Title", 22, 31, Color(10, 10, 10), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(text, "MN_Text", 22, 94, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("Players online: " .. #player.GetAll(), "MN_Text", 22, 124, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    end
+
+    local cancel = vgui.Create("DButton", frame)
+    cancel:SetPos(22, 154)
+    cancel:SetSize(180, 38)
+    cancel:SetText("")
+    cancel.Paint = function(self, pw, ph)
+        draw.RoundedBox(8, 0, 0, pw, ph, self:IsHovered() and Color(42, 48, 58) or theme.Panel)
+        draw.SimpleText("Cancel", "MN_Text", pw / 2, ph / 2, theme.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    end
+    cancel.DoClick = function() frame:Remove() end
+
+    local ok = vgui.Create("DButton", frame)
+    ok:SetPos(228, 154)
+    ok:SetSize(180, 38)
+    ok:SetText("")
+    ok.Paint = function(self, pw, ph)
+        draw.RoundedBox(8, 0, 0, pw, ph, self:IsHovered() and Color(255, 170, 40) or theme.Orange)
+        draw.SimpleText(confirmText or "Confirm", "MN_Text", pw / 2, ph / 2, Color(10, 10, 10), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    end
+    ok.DoClick = function()
+        frame:Remove()
+        if onConfirm then onConfirm() end
+    end
+end
+
+local function DangerousAction(title, text, action, payload)
+    Confirm(title, text, title, function()
+        SendAction(action, payload)
+    end)
 end
 
 net.Receive("MemoNetwork_AdminResult", function()
@@ -65,7 +118,7 @@ local function KindColor(kind)
     return theme.Orange or Color(255, 145, 0)
 end
 
-local function ActionButton(parent, x, y, w, h, title, subtitle, action, payload)
+local function ActionButton(parent, x, y, w, h, title, subtitle, action, payload, dangerous)
     local theme = MemoNetwork.Theme
     local btn = vgui.Create("DButton", parent)
     btn:SetPos(x, y)
@@ -76,14 +129,19 @@ local function ActionButton(parent, x, y, w, h, title, subtitle, action, payload
     btn.Paint = function(self, pw, ph)
         self.HoverAmount = Lerp(FrameTime() * 10, self.HoverAmount or 0, self:IsHovered() and 1 or 0)
         local bg = Color(18 + self.HoverAmount * 10, 24 + self.HoverAmount * 10, 32 + self.HoverAmount * 10, 235)
+        local accent = dangerous and Color(255, 90, 90) or theme.Orange
         draw.RoundedBox(10, 0, 0, pw, ph, bg)
-        draw.RoundedBox(8, 0, ph - 5, pw, 5, theme.Orange)
+        draw.RoundedBox(8, 0, ph - 5, pw, 5, accent)
         draw.SimpleText(title, "MN_Subtitle", 16, 22, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         draw.SimpleText(subtitle, "MN_Text", 16, 50, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end
     btn.DoClick = function()
         surface.PlaySound("buttons/button15.wav")
-        SendAction(action, payload)
+        if dangerous then
+            DangerousAction(title, subtitle, action, payload)
+        else
+            SendAction(action, payload)
+        end
     end
     return btn
 end
@@ -140,19 +198,39 @@ local function BuildDashboard(content)
     box:SetSize(512, 190)
     box.Paint = function(_, w, h)
         draw.RoundedBox(10, 0, 0, w, h, theme.PanelLight)
-        draw.SimpleText("Alpha 11 Administration Suite", "MN_Title", 24, 32, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText("New tabs: Broadcast and Logs.", "MN_Text", 24, 70, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText("Map control, player tools and server tools are now grouped in F6.", "MN_Text", 24, 102, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText("Next: deeper server cleanup tools and confirmations.", "MN_Text", 24, 134, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("Alpha 11.1 Server Management", "MN_Title", 24, 32, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("Advanced cleanup and confirm dialogs are now active.", "MN_Text", 24, 70, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("Dangerous actions ask for confirmation before they run.", "MN_Text", 24, 102, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("Next: permissions and action access per rank.", "MN_Text", 24, 134, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end
 end
 
 local function BuildTools(content)
-    ActionButton(content, 0, 0, 160, 76, "Cleanup", "Clean map props", "cleanup")
+    ActionButton(content, 0, 0, 160, 76, "Cleanup All", "Full map cleanup", "cleanup", nil, true)
     ActionButton(content, 176, 0, 160, 76, "God Mode", "Toggle god mode", "god")
     ActionButton(content, 352, 0, 160, 76, "Noclip", "Toggle noclip", "noclip")
     ActionButton(content, 0, 94, 160, 76, "Heal", "100 HP + armor", "health")
-    ActionButton(content, 176, 94, 160, 76, "Restart Map", "Reload current map", "restart_map")
+    ActionButton(content, 176, 94, 160, 76, "Restart Map", "Reload current map", "restart_map", nil, true)
+end
+
+local function BuildCleanup(content)
+    local theme = MemoNetwork.Theme
+    local info = vgui.Create("DPanel", content)
+    info:SetPos(0, 0)
+    info:SetSize(512, 62)
+    info.Paint = function(_, w, h)
+        draw.RoundedBox(10, 0, 0, w, h, theme.PanelLight)
+        draw.SimpleText("Advanced Cleanup", "MN_Subtitle", 18, 20, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("Remove specific entity groups without restarting the map.", "MN_Text", 18, 45, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    end
+
+    ActionButton(content, 0, 84, 160, 76, "Props", "Remove props", "cleanup_props", nil, true)
+    ActionButton(content, 176, 84, 160, 76, "Vehicles", "Remove vehicles", "cleanup_vehicles", nil, true)
+    ActionButton(content, 352, 84, 160, 76, "NPCs", "Remove NPCs", "cleanup_npcs", nil, true)
+    ActionButton(content, 0, 178, 160, 76, "Ragdolls", "Remove ragdolls", "cleanup_ragdolls", nil, true)
+    ActionButton(content, 176, 178, 160, 76, "Effects", "Remove effects", "cleanup_effects", nil, true)
+    ActionButton(content, 352, 178, 160, 76, "Projectiles", "Remove projectiles", "cleanup_projectiles", nil, true)
+    ActionButton(content, 0, 272, 512, 76, "Cleanup Everything", "Full map cleanup", "cleanup", nil, true)
 end
 
 local function BuildMaps(content)
@@ -187,7 +265,10 @@ local function BuildMaps(content)
             draw.SimpleText(subtitle, "MN_Small", 18, 42, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
             draw.SimpleText(selected and "CURRENT" or "CHANGE", "MN_Small", w - 18, h / 2, selected and theme.Success or theme.Orange, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
         end
-        row.DoClick = function() surface.PlaySound("buttons/button15.wav") SendAction("change_map", mapName) end
+        row.DoClick = function()
+            surface.PlaySound("buttons/button15.wav")
+            DangerousAction("Change Map", "Change server to " .. mapName .. "?", "change_map", mapName)
+        end
         y = y + 68
     end
 end
@@ -291,6 +372,7 @@ local function BuildContent(content)
     if activeTab == "Dashboard" then BuildDashboard(content)
     elseif activeTab == "Players" then BuildPlayers(content)
     elseif activeTab == "Tools" then BuildTools(content)
+    elseif activeTab == "Cleanup" then BuildCleanup(content)
     elseif activeTab == "Maps" then BuildMaps(content)
     elseif activeTab == "Broadcast" then BuildBroadcast(content)
     elseif activeTab == "Logs" then BuildLogs(content)
@@ -329,11 +411,11 @@ function MemoNetwork.Admin.Open()
     content:SetSize(w - 296, h - 116)
     content.Paint = function() end
     content.Rebuild = function(self) BuildContent(self) end
-    local tabs = {"Dashboard", "Players", "Tools", "Maps", "Broadcast", "Logs"}
+    local tabs = {"Dashboard", "Players", "Tools", "Cleanup", "Maps", "Broadcast", "Logs"}
     local y = 14
     for _, tab in ipairs(tabs) do
-        TabButton(sidebar, 16, y, 208, 50, tab, content)
-        y = y + 58
+        TabButton(sidebar, 16, y, 208, 44, tab, content)
+        y = y + 52
     end
     BuildContent(content)
 end
