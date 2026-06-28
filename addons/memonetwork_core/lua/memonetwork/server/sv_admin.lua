@@ -1,5 +1,5 @@
 -- MemoNetwork Lite Admin Tools
--- Alpha 10.2: supports self actions and target actions from Player Inspector.
+-- Alpha 10.3: supports self actions, target actions and map changing.
 
 util.AddNetworkString("MemoNetwork_AdminAction")
 util.AddNetworkString("MemoNetwork_AdminResult")
@@ -19,6 +19,18 @@ local function SendResult(ply, message, kind)
     net.Send(ply)
 end
 
+local function IsKnownMap(mapName)
+    mapName = tostring(mapName or "")
+    if mapName == "" then return false end
+
+    local maps = MemoNetwork.Config and MemoNetwork.Config.Maps or {}
+    for _, data in ipairs(maps) do
+        if data.map == mapName then return true end
+    end
+
+    return file.Exists("maps/" .. mapName .. ".bsp", "GAME")
+end
+
 local function ReadOptionalTarget()
     local ok, target = pcall(net.ReadEntity)
     if ok and IsValid(target) and target:IsPlayer() then
@@ -33,6 +45,31 @@ net.Receive("MemoNetwork_AdminAction", function(_, ply)
     end
 
     local action = net.ReadString()
+
+    if action == "change_map" then
+        local mapName = net.ReadString()
+
+        if not IsKnownMap(mapName) then
+            SendResult(ply, "Map is not available: " .. mapName, "error")
+            return
+        end
+
+        SendResult(ply, "Changing map to " .. mapName .. "...", "warning")
+        timer.Simple(1, function()
+            RunConsoleCommand("changelevel", mapName)
+        end)
+        return
+    end
+
+    if action == "restart_map" then
+        local current = game.GetMap()
+        SendResult(ply, "Restarting " .. current .. "...", "warning")
+        timer.Simple(1, function()
+            RunConsoleCommand("changelevel", current)
+        end)
+        return
+    end
+
     local target = ReadOptionalTarget()
 
     if action == "cleanup" then
