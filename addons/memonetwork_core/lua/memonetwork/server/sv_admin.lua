@@ -1,5 +1,5 @@
--- MemoNetwork Lite Admin Tools
--- Alpha 11.2: permission-aware admin actions, map changing, broadcasts, live logs and advanced cleanup.
+-- MemoNetwork Alpha 14 Server Admin Tools
+-- Permission-aware actions, map control, broadcasts, live logs and player management.
 
 util.AddNetworkString("MemoNetwork_AdminAction")
 util.AddNetworkString("MemoNetwork_AdminResult")
@@ -12,10 +12,6 @@ local function HasPerm(ply, permission)
         return MemoNetwork.Ranks.HasPermission(ply, permission)
     end
     return ply:IsAdmin()
-end
-
-local function IsAllowed(ply)
-    return HasPerm(ply, "admin.open")
 end
 
 local function RequirePerm(ply, permission)
@@ -35,42 +31,26 @@ local function SendResult(ply, message, kind)
 end
 
 local function LogAdmin(actor, message, kind)
-    local actorName = IsValid(actor) and actor:Nick() or "Console"
-
     net.Start("MemoNetwork_AdminLog")
         net.WriteString(os.date("%H:%M:%S"))
-        net.WriteString(actorName)
+        net.WriteString(IsValid(actor) and actor:Nick() or "Console")
         net.WriteString(message or "")
         net.WriteString(kind or "info")
     net.Broadcast()
-end
-
-local function BroadcastMessage(actor, message)
-    message = string.Trim(tostring(message or ""))
-    if message == "" then return false end
-
-    net.Start("MemoNetwork_Broadcast")
-        net.WriteString(IsValid(actor) and actor:Nick() or "Server")
-        net.WriteString(message)
-    net.Broadcast()
-
-    LogAdmin(actor, "broadcasted: " .. message, "info")
-    return true
 end
 
 local function IsKnownMap(mapName)
     mapName = tostring(mapName or "")
     if mapName == "" then return false end
 
-    local maps = MemoNetwork.Config and MemoNetwork.Config.Maps or {}
-    for _, data in ipairs(maps) do
+    for _, data in ipairs((MemoNetwork.Config and MemoNetwork.Config.Maps) or {}) do
         if data.map == mapName then return true end
     end
 
     return file.Exists("maps/" .. mapName .. ".bsp", "GAME")
 end
 
-local function ReadOptionalTarget()
+local function ReadTarget()
     local ok, target = pcall(net.ReadEntity)
     if ok and IsValid(target) and target:IsPlayer() then return target end
 end
@@ -86,7 +66,7 @@ local function RemoveMatching(predicate)
     return removed
 end
 
-local function IsPlayerProp(ent)
+local function IsProp(ent)
     local class = ent:GetClass()
     return class == "prop_physics" or class == "prop_physics_multiplayer" or class == "prop_dynamic" or class == "prop_dynamic_override"
 end
@@ -112,17 +92,19 @@ hook.Add("PlayerDisconnected", "MemoNetwork_AdminLog_PlayerLeave", function(ply)
 end)
 
 net.Receive("MemoNetwork_AdminAction", function(_, ply)
-    if not IsAllowed(ply) then
-        SendResult(ply, "You do not have permission.", "error")
-        return
-    end
-
+    if not RequirePerm(ply, "admin.open") then return end
     local action = net.ReadString()
 
     if action == "broadcast" then
         if not RequirePerm(ply, "broadcast") then return end
-        local message = net.ReadString()
-        if BroadcastMessage(ply, message) then SendResult(ply, "Broadcast sent.", "success") else SendResult(ply, "Broadcast message is empty.", "error") end
+        local message = string.Trim(net.ReadString() or "")
+        if message == "" then SendResult(ply, "Broadcast message is empty.", "error") return end
+        net.Start("MemoNetwork_Broadcast")
+            net.WriteString(ply:Nick())
+            net.WriteString(message)
+        net.Broadcast()
+        SendResult(ply, "Broadcast sent.", "success")
+        LogAdmin(ply, "broadcasted: " .. message, "info")
         return
     end
 
@@ -153,7 +135,7 @@ net.Receive("MemoNetwork_AdminAction", function(_, ply)
         return
     elseif action == "cleanup_props" then
         if not RequirePerm(ply, "cleanup") then return end
-        local count = RemoveMatching(IsPlayerProp)
+        local count = RemoveMatching(IsProp)
         SendResult(ply, "Removed " .. count .. " props.", "success")
         LogAdmin(ply, "removed " .. count .. " props", "success")
         return
@@ -192,7 +174,7 @@ net.Receive("MemoNetwork_AdminAction", function(_, ply)
         return
     end
 
-    local target = ReadOptionalTarget()
+    local target = ReadTarget()
 
     if action == "god" then
         if ply:HasGodMode() then ply:GodDisable() SendResult(ply, "God mode disabled.", "warning") LogAdmin(ply, "disabled god mode", "warning") else ply:GodEnable() SendResult(ply, "God mode enabled.", "success") LogAdmin(ply, "enabled god mode", "success") end
@@ -215,6 +197,12 @@ net.Receive("MemoNetwork_AdminAction", function(_, ply)
     elseif action == "slay" and IsValid(target) then
         if not RequirePerm(ply, "players.manage") then return end
         target:Kill() SendResult(ply, "Slayed " .. target:Nick() .. ".", "warning") LogAdmin(ply, "slayed " .. target:Nick(), "warning")
+    elseif action == "respawn" and IsValid(target) then
+        if not RequirePerm(ply, "players.manage") then return end
+        target:Spawn() SendResult(ply, "Respawned " .. target:Nick() .. ".", "success") LogAdmin(ply, "respawned " .. target:Nick(), "success")
+    elseif action == "kick" and IsValid(target) then
+        if not RequirePerm(ply, "players.manage") then return end
+        target:Kick("Kicked by " .. ply:Nick()) SendResult(ply, "Kicked " .. target:Nick() .. ".", "warning") LogAdmin(ply, "kicked " .. target:Nick(), "warning")
     elseif action == "spectate" and IsValid(target) then
         if not RequirePerm(ply, "players.manage") then return end
         if ply == target then SendResult(ply, "You cannot spectate yourself.", "warning") return end
