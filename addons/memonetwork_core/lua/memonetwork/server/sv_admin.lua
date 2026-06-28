@@ -1,5 +1,5 @@
 -- MemoNetwork Lite Admin Tools
--- Alpha 11: admin actions, map changing, broadcasts and live admin logs.
+-- Alpha 11.1: admin actions, map changing, broadcasts, live logs and advanced cleanup.
 
 util.AddNetworkString("MemoNetwork_AdminAction")
 util.AddNetworkString("MemoNetwork_AdminResult")
@@ -64,6 +64,34 @@ local function ReadOptionalTarget()
     end
 end
 
+local function RemoveMatching(predicate)
+    local removed = 0
+
+    for _, ent in ipairs(ents.GetAll()) do
+        if IsValid(ent) and predicate(ent) then
+            ent:Remove()
+            removed = removed + 1
+        end
+    end
+
+    return removed
+end
+
+local function IsPlayerProp(ent)
+    local class = ent:GetClass()
+    return class == "prop_physics" or class == "prop_physics_multiplayer" or class == "prop_dynamic" or class == "prop_dynamic_override"
+end
+
+local function IsVehicle(ent)
+    local class = ent:GetClass()
+    return class == "prop_vehicle_jeep" or class == "prop_vehicle_airboat" or class == "prop_vehicle_prisoner_pod" or string.StartWith(class, "gmod_sent_vehicle")
+end
+
+local function IsProjectile(ent)
+    local class = ent:GetClass()
+    return string.find(class, "grenade", 1, true) or string.find(class, "rocket", 1, true) or string.find(class, "missile", 1, true) or class == "crossbow_bolt"
+end
+
 hook.Add("PlayerInitialSpawn", "MemoNetwork_AdminLog_PlayerJoin", function(ply)
     timer.Simple(2, function()
         if IsValid(ply) then
@@ -120,13 +148,49 @@ net.Receive("MemoNetwork_AdminAction", function(_, ply)
         return
     end
 
-    local target = ReadOptionalTarget()
-
     if action == "cleanup" then
         game.CleanUpMap(false)
         SendResult(ply, "Map cleanup completed.", "success")
         LogAdmin(ply, "cleaned up the map", "success")
-    elseif action == "god" then
+        return
+    elseif action == "cleanup_props" then
+        local count = RemoveMatching(IsPlayerProp)
+        SendResult(ply, "Removed " .. count .. " props.", "success")
+        LogAdmin(ply, "removed " .. count .. " props", "success")
+        return
+    elseif action == "cleanup_vehicles" then
+        local count = RemoveMatching(IsVehicle)
+        SendResult(ply, "Removed " .. count .. " vehicles.", "success")
+        LogAdmin(ply, "removed " .. count .. " vehicles", "success")
+        return
+    elseif action == "cleanup_npcs" then
+        local count = RemoveMatching(function(ent) return ent:IsNPC() end)
+        SendResult(ply, "Removed " .. count .. " NPCs.", "success")
+        LogAdmin(ply, "removed " .. count .. " NPCs", "success")
+        return
+    elseif action == "cleanup_ragdolls" then
+        local count = RemoveMatching(function(ent) return ent:GetClass() == "prop_ragdoll" end)
+        SendResult(ply, "Removed " .. count .. " ragdolls.", "success")
+        LogAdmin(ply, "removed " .. count .. " ragdolls", "success")
+        return
+    elseif action == "cleanup_effects" then
+        local count = RemoveMatching(function(ent)
+            local class = ent:GetClass()
+            return class == "env_sprite" or class == "env_smoketrail" or class == "env_fire" or class == "env_explosion" or class == "info_particle_system"
+        end)
+        SendResult(ply, "Removed " .. count .. " effects.", "success")
+        LogAdmin(ply, "removed " .. count .. " effects", "success")
+        return
+    elseif action == "cleanup_projectiles" then
+        local count = RemoveMatching(IsProjectile)
+        SendResult(ply, "Removed " .. count .. " projectiles.", "success")
+        LogAdmin(ply, "removed " .. count .. " projectiles", "success")
+        return
+    end
+
+    local target = ReadOptionalTarget()
+
+    if action == "god" then
         if ply:HasGodMode() then
             ply:GodDisable()
             SendResult(ply, "God mode disabled.", "warning")
