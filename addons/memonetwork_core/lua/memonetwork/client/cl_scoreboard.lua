@@ -1,5 +1,6 @@
 -- MemoNetwork Lite Scoreboard V3
 -- Restored polished scoreboard: avatars, ranks, ping colors and sorting.
+-- Alpha 10.1: clicking a row opens the Player Inspector.
 
 local board
 local playerList
@@ -46,25 +47,38 @@ local function BuildPlayerList(parent)
     local y = 0
 
     for _, ply in ipairs(SortedPlayers()) do
-        local row = vgui.Create("DPanel", playerList)
+        local row = vgui.Create("DButton", playerList)
         row:SetPos(0, y)
         row:SetSize(w - 44, 54)
+        row:SetText("")
+        row.HoverAmount = 0
 
         local avatar = vgui.Create("AvatarImage", row)
         avatar:SetSize(36, 36)
         avatar:SetPos(10, 9)
         avatar:SetPlayer(ply, 36)
 
-        row.Paint = function(_, rw, rh)
+        row.Paint = function(self, rw, rh)
+            self.HoverAmount = Lerp(FrameTime() * 10, self.HoverAmount or 0, self:IsHovered() and 1 or 0)
+
             local rank = MemoNetwork.Ranks and MemoNetwork.Ranks.Get(ply) or {name = "PLAYER", color = theme.Text}
             local ping = IsValid(ply) and ply:Ping() or 0
+            local base = self:IsHovered() and Color(38, 48, 60, 235) or (theme.PanelLight or Color(30, 38, 48, 220))
 
-            draw.RoundedBox(8, 0, 0, rw, rh, theme.PanelLight or Color(30, 38, 48, 220))
-            draw.RoundedBox(6, 0, 0, 5, rh, rank.color or theme.Orange)
+            draw.RoundedBox(8, 0, 0, rw, rh, base)
+            draw.RoundedBox(6, 0, 0, 5 + (self.HoverAmount * 3), rh, rank.color or theme.Orange)
 
             draw.SimpleText(IsValid(ply) and ply:Nick() or "Unknown", "MN_Text", 58, rh / 2, theme.Text or color_white, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
             draw.SimpleText(rank.name or "PLAYER", "MN_Text", rw - 170, rh / 2, rank.color or theme.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
             draw.SimpleText(ping .. " ms", "MN_Text", rw - 16, rh / 2, PingColor(ping), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+        end
+
+        row.DoClick = function()
+            surface.PlaySound("buttons/button15.wav")
+
+            if MemoNetwork.PlayerInspector and MemoNetwork.PlayerInspector.Open then
+                MemoNetwork.PlayerInspector.Open(ply)
+            end
         end
 
         y = y + 62
