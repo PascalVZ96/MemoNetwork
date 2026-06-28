@@ -1,5 +1,5 @@
 -- MemoNetwork Lite Scoreboard V2
--- Patch: fixes rank text clipping and improves row spacing.
+-- Patch: fixes rank text alignment/readability by using a single-line row layout.
 
 local board
 local playerList
@@ -46,9 +46,11 @@ local function SortedPlayers()
 
     table.sort(players, function(a, b)
         local wa, wb = GetSortWeight(a), GetSortWeight(b)
+
         if wa == wb then
             return string.lower(a:Nick()) < string.lower(b:Nick())
         end
+
         return wa < wb
     end)
 
@@ -71,12 +73,12 @@ local function BuildPlayerList(parent)
     for _, ply in ipairs(SortedPlayers()) do
         local row = vgui.Create("DPanel", playerList)
         row:SetPos(0, y)
-        row:SetSize(w - 44, 62)
+        row:SetSize(w - 44, 54)
 
         local avatar = vgui.Create("AvatarImage", row)
-        avatar:SetSize(40, 40)
-        avatar:SetPos(10, 11)
-        avatar:SetPlayer(ply, 40)
+        avatar:SetSize(36, 36)
+        avatar:SetPos(10, 9)
+        avatar:SetPlayer(ply, 36)
 
         row.Paint = function(_, rw, rh)
             local rankText, rankColor = GetRank(ply)
@@ -84,13 +86,17 @@ local function BuildPlayerList(parent)
 
             draw.RoundedBox(8, 0, 0, rw, rh, theme.PanelLight or Color(30, 38, 48, 220))
 
-            draw.SimpleText(IsValid(ply) and ply:Nick() or "Unknown", "MN_Text", 62, 22, theme.Text or color_white, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-            draw.SimpleText(rankText, "MN_Small", 62, 43, rankColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            -- Name column
+            draw.SimpleText(IsValid(ply) and ply:Nick() or "Unknown", "MN_Text", 58, rh / 2, theme.Text or color_white, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
+            -- Rank column, centered and fully readable
+            draw.SimpleText(rankText, "MN_Text", rw - 170, rh / 2, rankColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+
+            -- Ping column
             draw.SimpleText(ping .. " ms", "MN_Text", rw - 16, rh / 2, PingColor(ping), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
         end
 
-        y = y + 70
+        y = y + 62
     end
 end
 
@@ -113,7 +119,7 @@ local function OpenScoreboard()
     local sw, sh = ScrW(), ScrH()
 
     local w = 640
-    local h = math.min(460, sh - 160)
+    local h = math.min(420, sh - 160)
 
     board = vgui.Create("DFrame")
     board:SetSize(w, h)
