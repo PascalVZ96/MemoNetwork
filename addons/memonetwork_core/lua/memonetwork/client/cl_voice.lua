@@ -1,5 +1,5 @@
 -- MemoNetwork Lite Voice HUD
--- Supports client settings.
+-- Alpha 9 identity update: displays rank below speaker name.
 
 local speakers = {}
 
@@ -59,18 +59,22 @@ hook.Add("HUDPaint", "MemoNetwork_VoiceHUD", function()
 
     local theme = MemoNetwork.Theme
     local sw = ScrW()
-    local x, y = sw - 260, 90
-    local w = 230
-    local h = 40 + (#active * 28)
+    local x, y = sw - 280, 90
+    local w = 250
+    local rowH = 42
+    local h = 40 + (#active * rowH)
 
     draw.RoundedBox(10, x, y, w, h, theme.Background)
     draw.RoundedBoxEx(10, x, y, w, 32, theme.Orange, true, true, false, false)
     draw.SimpleText("VOICE", "MN_Subtitle", x + 14, y + 16, Color(10, 10, 10), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
     for i, ply in ipairs(active) do
-        local rowY = y + 40 + ((i - 1) * 28)
-        draw.RoundedBox(6, x + 12, rowY, w - 24, 22, theme.PanelLight)
-        draw.RoundedBox(4, x + 22, rowY + 7, 8, 8, theme.Orange)
-        draw.SimpleText(ply:Nick(), "MN_Text", x + 42, rowY + 11, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        local rank = MemoNetwork.Ranks.Get(ply)
+        local rowY = y + 40 + ((i - 1) * rowH)
+
+        draw.RoundedBox(6, x + 12, rowY, w - 24, rowH - 6, theme.PanelLight)
+        draw.RoundedBox(4, x + 22, rowY + 11, 8, 16, rank.color or theme.Orange)
+        draw.SimpleText(ply:Nick(), "MN_Text", x + 42, rowY + 13, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(rank.name or "PLAYER", "MN_Small", x + 42, rowY + 31, rank.color or theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end
 end)

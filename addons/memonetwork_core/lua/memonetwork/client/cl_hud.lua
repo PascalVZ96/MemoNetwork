@@ -1,5 +1,5 @@
 -- MemoNetwork Lite HUD
--- Supports client settings.
+-- Alpha 9 identity update: displays player rank in the info box.
 
 hook.Add("HUDShouldDraw", "MemoNetwork_HideDefaultHUD", function(name)
     local hidden = {
@@ -54,6 +54,7 @@ hook.Add("HUDPaint", "MemoNetwork_HUD", function()
 
     local theme = MemoNetwork.Theme
     local cfg = MemoNetwork.Config
+    local rank = MemoNetwork.Ranks.Get(ply)
 
     local hp = math.max(ply:Health(), 0)
     local armor = math.max(ply:Armor(), 0)
@@ -62,7 +63,7 @@ hook.Add("HUDPaint", "MemoNetwork_HUD", function()
     smoothArmor = Lerp(FrameTime() * 8, smoothArmor, armor)
 
     local x, y = 24, 24
-    local w, h = 380, 245
+    local w, h = 390, 260
     local pad = 18
 
     draw.RoundedBox(12, x, y, w, h, theme.Background)
@@ -89,7 +90,7 @@ hook.Add("HUDPaint", "MemoNetwork_HUD", function()
     local boxX = x + pad
     local boxY = y + 168
     local boxW = w - pad * 2
-    local boxH = 58
+    local boxH = 74
 
     draw.RoundedBox(8, boxX, boxY, boxW, boxH, theme.PanelLight)
 
@@ -110,7 +111,8 @@ hook.Add("HUDPaint", "MemoNetwork_HUD", function()
     local rightWidth = 128
     local leftMaxWidth = boxW - rightWidth - 26
 
-    draw.SimpleText(FitText(ply:Nick(), "MN_Text", leftMaxWidth), "MN_Text", boxX + 12, boxY + 18, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-    draw.SimpleText(FitText(game.GetMap(), "MN_Small", leftMaxWidth), "MN_Small", boxX + 12, boxY + 40, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-    draw.SimpleText(rightText, "MN_Small", boxX + boxW - 12, boxY + 40, theme.Muted, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+    draw.SimpleText(FitText(ply:Nick(), "MN_Text", leftMaxWidth), "MN_Text", boxX + 12, boxY + 17, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    draw.SimpleText(rank.name or "PLAYER", "MN_Small", boxX + 12, boxY + 38, rank.color or theme.Orange, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    draw.SimpleText(FitText(game.GetMap(), "MN_Small", leftMaxWidth), "MN_Small", boxX + 12, boxY + 58, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    draw.SimpleText(rightText, "MN_Small", boxX + boxW - 12, boxY + 58, theme.Muted, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
 end)

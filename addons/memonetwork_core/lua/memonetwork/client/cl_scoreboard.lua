@@ -1,51 +1,8 @@
--- MemoNetwork Lite Scoreboard V2
--- Owner SteamID support added.
+-- MemoNetwork Lite Scoreboard V3
+-- Alpha 9 identity update: shared rank helper, owner support and rank colors.
 
 local board
 local playerList
-
-local function IsOwner(ply)
-    return IsValid(ply)
-        and MemoNetwork
-        and MemoNetwork.Config
-        and MemoNetwork.Config.Owners
-        and MemoNetwork.Config.Owners[ply:SteamID()]
-end
-
-local function GetRank(ply)
-    if not IsValid(ply) then return "Player", Color(220, 220, 220) end
-
-    if IsOwner(ply) then
-        return "Owner", Color(255, 145, 0)
-    end
-
-    local group = "player"
-
-    if ply.GetUserGroup then
-        group = string.lower(ply:GetUserGroup() or "player")
-    elseif ply:IsSuperAdmin() then
-        group = "superadmin"
-    elseif ply:IsAdmin() then
-        group = "admin"
-    end
-
-    if group == "superadmin" or group == "owner" then
-        return "Owner", Color(255, 145, 0)
-    end
-
-    if group == "admin" then
-        return "Admin", Color(80, 160, 255)
-    end
-
-    return "Player", Color(230, 230, 230)
-end
-
-local function GetSortWeight(ply)
-    local rank = select(1, GetRank(ply))
-    if rank == "Owner" then return 1 end
-    if rank == "Admin" then return 2 end
-    return 3
-end
 
 local function PingColor(ping)
     if ping <= 50 then return Color(90, 220, 120) end
@@ -57,7 +14,7 @@ local function SortedPlayers()
     local players = player.GetAll()
 
     table.sort(players, function(a, b)
-        local wa, wb = GetSortWeight(a), GetSortWeight(b)
+        local wa, wb = MemoNetwork.Ranks.GetSort(a), MemoNetwork.Ranks.GetSort(b)
 
         if wa == wb then
             return string.lower(a:Nick()) < string.lower(b:Nick())
@@ -93,13 +50,14 @@ local function BuildPlayerList(parent)
         avatar:SetPlayer(ply, 36)
 
         row.Paint = function(_, rw, rh)
-            local rankText, rankColor = GetRank(ply)
+            local rank = MemoNetwork.Ranks.Get(ply)
             local ping = IsValid(ply) and ply:Ping() or 0
 
             draw.RoundedBox(8, 0, 0, rw, rh, theme.PanelLight or Color(30, 38, 48, 220))
+            draw.RoundedBox(6, 0, 0, 5, rh, rank.color or theme.Orange)
 
             draw.SimpleText(IsValid(ply) and ply:Nick() or "Unknown", "MN_Text", 58, rh / 2, theme.Text or color_white, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-            draw.SimpleText(rankText, "MN_Text", rw - 170, rh / 2, rankColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText(rank.name or "PLAYER", "MN_Text", rw - 170, rh / 2, rank.color or theme.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
             draw.SimpleText(ping .. " ms", "MN_Text", rw - 16, rh / 2, PingColor(ping), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
         end
 
@@ -148,12 +106,12 @@ local function OpenScoreboard()
     BuildPlayerList(board)
 end
 
-hook.Add("ScoreboardShow", "MemoNetwork_ScoreboardShow_V2", function()
+hook.Add("ScoreboardShow", "MemoNetwork_ScoreboardShow_V3", function()
     OpenScoreboard()
     return false
 end)
 
-hook.Add("ScoreboardHide", "MemoNetwork_ScoreboardHide_V2", function()
+hook.Add("ScoreboardHide", "MemoNetwork_ScoreboardHide_V3", function()
     CloseScoreboard()
     return false
 end)
