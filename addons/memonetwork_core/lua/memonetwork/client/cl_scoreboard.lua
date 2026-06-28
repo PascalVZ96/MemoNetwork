@@ -1,6 +1,6 @@
 -- MemoNetwork Lite Scoreboard V3
 -- Restored polished scoreboard: avatars, ranks, ping colors and sorting.
--- Alpha 10.1: clicking a row opens the Player Inspector.
+-- Alpha 10.1 hotfix: enables mouse input so clicking rows opens Player Inspector.
 
 local board
 local playerList
@@ -33,6 +33,18 @@ local function SortedPlayers()
     return players
 end
 
+local function OpenInspector(ply)
+    if not IsValid(ply) then return end
+
+    surface.PlaySound("buttons/button15.wav")
+
+    if MemoNetwork.PlayerInspector and MemoNetwork.PlayerInspector.Open then
+        MemoNetwork.PlayerInspector.Open(ply)
+    elseif MemoNetwork.Notify then
+        MemoNetwork.Notify("Player Inspector is not loaded.", "error", "Scoreboard", 3)
+    end
+end
+
 local function BuildPlayerList(parent)
     if not IsValid(parent) then return end
     if IsValid(playerList) then playerList:Remove() end
@@ -43,6 +55,8 @@ local function BuildPlayerList(parent)
     playerList = vgui.Create("DScrollPanel", parent)
     playerList:SetPos(18, 72)
     playerList:SetSize(w - 36, parent:GetTall() - 90)
+    playerList:SetMouseInputEnabled(true)
+    playerList:SetKeyboardInputEnabled(false)
 
     local y = 0
 
@@ -51,12 +65,15 @@ local function BuildPlayerList(parent)
         row:SetPos(0, y)
         row:SetSize(w - 44, 54)
         row:SetText("")
+        row:SetCursor("hand")
+        row:SetMouseInputEnabled(true)
         row.HoverAmount = 0
 
         local avatar = vgui.Create("AvatarImage", row)
         avatar:SetSize(36, 36)
         avatar:SetPos(10, 9)
         avatar:SetPlayer(ply, 36)
+        avatar:SetMouseInputEnabled(false)
 
         row.Paint = function(self, rw, rh)
             self.HoverAmount = Lerp(FrameTime() * 10, self.HoverAmount or 0, self:IsHovered() and 1 or 0)
@@ -74,10 +91,16 @@ local function BuildPlayerList(parent)
         end
 
         row.DoClick = function()
-            surface.PlaySound("buttons/button15.wav")
+            OpenInspector(ply)
+        end
 
-            if MemoNetwork.PlayerInspector and MemoNetwork.PlayerInspector.Open then
-                MemoNetwork.PlayerInspector.Open(ply)
+        row.DoDoubleClick = function()
+            OpenInspector(ply)
+        end
+
+        row.OnMousePressed = function(_, key)
+            if key == MOUSE_LEFT then
+                OpenInspector(ply)
             end
         end
 
@@ -86,6 +109,8 @@ local function BuildPlayerList(parent)
 end
 
 local function CloseScoreboard()
+    gui.EnableScreenClicker(false)
+
     if IsValid(board) then
         board:AlphaTo(0, 0.10, 0, function()
             if IsValid(board) then
@@ -107,12 +132,16 @@ local function OpenScoreboard()
     local w = 640
     local h = math.min(420, sh - 160)
 
+    gui.EnableScreenClicker(true)
+
     board = vgui.Create("DFrame")
     board:SetSize(w, h)
     board:SetPos((sw - w) / 2, (sh - h) / 2)
     board:SetTitle("")
     board:SetDraggable(false)
     board:ShowCloseButton(false)
+    board:SetMouseInputEnabled(true)
+    board:SetKeyboardInputEnabled(false)
     board:SetAlpha(0)
     board:AlphaTo(255, 0.10, 0)
 
@@ -122,6 +151,7 @@ local function OpenScoreboard()
 
         draw.SimpleText(MemoNetwork.Config.ServerName or "MemoNetwork", "MN_Title", 22, 28, Color(10, 10, 10), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         draw.SimpleText(#player.GetAll() .. "/" .. game.MaxPlayers(), "MN_Text", pw - 22, 28, Color(10, 10, 10), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("Click a player for details", "MN_Small", pw / 2, 28, Color(10, 10, 10, 180), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
 
     BuildPlayerList(board)
