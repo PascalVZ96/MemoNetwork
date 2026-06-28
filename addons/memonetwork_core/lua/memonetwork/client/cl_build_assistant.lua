@@ -1,4 +1,4 @@
--- MemoNetwork Alpha 15 Build Assistant
+-- MemoNetwork Alpha 15.1 Build Assistant
 -- Lightweight Sandbox helper showing info about the entity you are looking at.
 
 MemoNetwork = MemoNetwork or {}
@@ -28,34 +28,40 @@ local function NiceModel(model)
     return parts[#parts] or model
 end
 
+local function SafeNWEntity(ent, key)
+    if not IsValid(ent) or not ent.GetNWEntity then return nil end
+    local ok, value = pcall(ent.GetNWEntity, ent, key)
+    if ok and IsValid(value) and value:IsPlayer() then return value end
+end
+
 local function EntityOwner(ent)
     if not IsValid(ent) then return "Unknown" end
 
     if ent.CPPIGetOwner then
-        local owner = ent:CPPIGetOwner()
-        if IsValid(owner) and owner:IsPlayer() then
-            return owner:Nick()
-        end
+        local ok, owner = pcall(ent.CPPIGetOwner, ent)
+        if ok and IsValid(owner) and owner:IsPlayer() then return owner:Nick() end
     end
 
-    local owner = ent:GetNWEntity("Owner")
-    if IsValid(owner) and owner:IsPlayer() then return owner:Nick() end
+    local owner = SafeNWEntity(ent, "Owner") or SafeNWEntity(ent, "owner") or SafeNWEntity(ent, "Creator")
+    if IsValid(owner) then return owner:Nick() end
 
-    local creator = ent:GetCreator()
-    if IsValid(creator) and creator:IsPlayer() then return creator:Nick() end
+    if ent.GetCreator then
+        local ok, creator = pcall(ent.GetCreator, ent)
+        if ok and IsValid(creator) and creator:IsPlayer() then return creator:Nick() end
+    end
 
     return "Unknown"
 end
 
 local function FrozenState(ent)
-    if not IsValid(ent) then return "Unknown" end
+    if not IsValid(ent) or not ent.GetPhysicsObject then return "Unknown" end
     local phys = ent:GetPhysicsObject()
     if not IsValid(phys) then return "No physics" end
     return phys:IsMotionEnabled() and "No" or "Yes"
 end
 
 local function Mass(ent)
-    if not IsValid(ent) then return "-" end
+    if not IsValid(ent) or not ent.GetPhysicsObject then return "-" end
     local phys = ent:GetPhysicsObject()
     if not IsValid(phys) then return "-" end
     return math.Round(phys:GetMass()) .. " kg"
