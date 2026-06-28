@@ -1,5 +1,5 @@
--- MemoNetwork Alpha 11.1 Admin Panel
--- F6 admin dashboard with tools, players, maps, broadcast, live logs and confirmations.
+-- MemoNetwork Alpha 11.4 Admin Panel
+-- F6 admin dashboard with integrated rank manager, permissions, cleanup, maps, broadcast and logs.
 
 MemoNetwork = MemoNetwork or {}
 MemoNetwork.Admin = MemoNetwork.Admin or {}
@@ -8,11 +8,17 @@ local panel
 local activeTab = "Dashboard"
 local adminLogs = adminLogs or {}
 
-local function IsAllowed()
+local function HasPerm(permission)
     local ply = LocalPlayer()
     if not IsValid(ply) then return false end
-    if MemoNetwork.Ranks and MemoNetwork.Ranks.CanAdmin then return MemoNetwork.Ranks.CanAdmin(ply) end
+    if MemoNetwork.Ranks and MemoNetwork.Ranks.HasPermission then
+        return MemoNetwork.Ranks.HasPermission(ply, permission)
+    end
     return ply:IsAdmin()
+end
+
+local function IsAllowed()
+    return HasPerm("admin.open")
 end
 
 local function AddLocalLog(actor, message, kind)
@@ -30,6 +36,22 @@ local function SendAction(action, payload)
         net.WriteString(action)
         if payload then net.WriteString(payload) end
     net.SendToServer()
+end
+
+local function SendRank(target, rankName)
+    if not IsValid(target) then return end
+    net.Start("MemoNetwork_SetRank")
+        net.WriteEntity(target)
+        net.WriteString(rankName)
+    net.SendToServer()
+end
+
+local function Notify(message, kind, title)
+    if MemoNetwork.Notify then
+        MemoNetwork.Notify(message, kind or "info", title or "Admin", 3)
+    else
+        chat.AddText(Color(255, 145, 0), "[MemoNetwork] ", color_white, message)
+    end
 end
 
 local function Confirm(title, text, confirmText, onConfirm)
@@ -89,7 +111,7 @@ net.Receive("MemoNetwork_AdminResult", function()
     local message = net.ReadString()
     local kind = net.ReadString()
     AddLocalLog("Server", message, kind)
-    if MemoNetwork.Notify then MemoNetwork.Notify(message, kind, "Admin", 3) else chat.AddText(Color(255, 145, 0), "[MemoNetwork Admin] ", color_white, message) end
+    Notify(message, kind, "Admin")
 end)
 
 net.Receive("MemoNetwork_AdminLog", function()
@@ -104,9 +126,7 @@ end)
 net.Receive("MemoNetwork_Broadcast", function()
     local actor = net.ReadString()
     local message = net.ReadString()
-    if MemoNetwork.Notify then
-        MemoNetwork.Notify(message, "info", "Broadcast - " .. actor, 6)
-    end
+    Notify(message, "info", "Broadcast - " .. actor)
     chat.AddText(Color(255, 145, 0), "[Broadcast] ", Color(240, 240, 240), message)
 end)
 
@@ -198,10 +218,10 @@ local function BuildDashboard(content)
     box:SetSize(512, 190)
     box.Paint = function(_, w, h)
         draw.RoundedBox(10, 0, 0, w, h, theme.PanelLight)
-        draw.SimpleText("Alpha 11.1 Server Management", "MN_Title", 24, 32, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText("Advanced cleanup and confirm dialogs are now active.", "MN_Text", 24, 70, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText("Dangerous actions ask for confirmation before they run.", "MN_Text", 24, 102, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText("Next: permissions and action access per rank.", "MN_Text", 24, 134, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("Alpha 11.4 Rank Manager Integration", "MN_Title", 24, 32, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("Rank Manager is now inside F6 as the Ranks tab.", "MN_Text", 24, 70, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("Double update: added Ranks tab and Permissions tab.", "MN_Text", 24, 102, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("Console command mn_rankmanager still works as fallback.", "MN_Text", 24, 134, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end
 end
 
@@ -299,8 +319,133 @@ local function BuildPlayers(content)
             draw.SimpleText(rank.name or "PLAYER", "MN_Small", 62, 42, rank.color or theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
             draw.SimpleText(IsValid(ply) and (ply:Ping() .. " ms") or "0 ms", "MN_Text", w - 18, h / 2, MemoNetwork.Player and MemoNetwork.Player.GetPingColor(IsValid(ply) and ply:Ping() or 0) or theme.Text, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
         end
-        row.DoClick = function() if MemoNetwork.PlayerInspector and MemoNetwork.PlayerInspector.Open then MemoNetwork.PlayerInspector.Open(ply) end end
+        row.DoClick = function()
+            if MemoNetwork.PlayerInspector and MemoNetwork.PlayerInspector.Open then MemoNetwork.PlayerInspector.Open(ply) end
+        end
+        row.DoRightClick = function()
+            if not HasPerm("ranks.manage") then return end
+            local menu = DermaMenu()
+            menu:AddOption("Open Inspector", function() if MemoNetwork.PlayerInspector then MemoNetwork.PlayerInspector.Open(ply) end end)
+            local sub = menu:AddSubMenu("Set Rank")
+            for _, rankName in ipairs(MemoNetwork.Ranks.Order or {}) do
+                sub:AddOption(rankName, function() SendRank(ply, rankName) end)
+            end
+            menu:Open()
+        end
         y = y + 68
+    end
+end
+
+local function BuildRanks(content)
+    local theme = MemoNetwork.Theme
+    local header = vgui.Create("DPanel", content)
+    header:SetPos(0, 0)
+    header:SetSize(512, 60)
+    header.Paint = function(_, w, h)
+        draw.RoundedBox(10, 0, 0, w, h, theme.PanelLight)
+        draw.SimpleText("Rank Manager", "MN_Subtitle", 18, 20, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("Change ranks here. Saved ranks stay after restart.", "MN_Text", 18, 44, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    end
+
+    if not HasPerm("ranks.manage") then
+        local locked = vgui.Create("DPanel", content)
+        locked:SetPos(0, 84)
+        locked:SetSize(512, 80)
+        locked.Paint = function(_, w, h)
+            draw.RoundedBox(10, 0, 0, w, h, theme.PanelLight)
+            draw.SimpleText("Missing permission: ranks.manage", "MN_Subtitle", 18, h / 2, Color(255, 90, 90), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        end
+        return
+    end
+
+    local scroll = vgui.Create("DScrollPanel", content)
+    scroll:SetPos(0, 78)
+    scroll:SetSize(512, 340)
+
+    local players = player.GetAll()
+    if MemoNetwork.Player and MemoNetwork.Player.Sort then MemoNetwork.Player.Sort(players) end
+
+    local y = 0
+    for _, ply in ipairs(players) do
+        local currentRank = MemoNetwork.Ranks and MemoNetwork.Ranks.GetName(ply) or "PLAYER"
+        local rankColor = MemoNetwork.Ranks and MemoNetwork.Ranks.GetColor(ply) or theme.Text
+        local row = vgui.Create("DPanel", scroll)
+        row:SetPos(0, y)
+        row:SetSize(500, 74)
+        row.Paint = function(_, rw, rh)
+            draw.RoundedBox(10, 0, 0, rw, rh, theme.PanelLight)
+            draw.RoundedBox(6, 0, 0, 6, rh, rankColor)
+            draw.SimpleText(IsValid(ply) and ply:Nick() or "Unknown", "MN_Subtitle", 62, 22, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText(IsValid(ply) and ply:SteamID() or "Unknown", "MN_Small", 62, 50, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        end
+        local avatar = vgui.Create("AvatarImage", row)
+        avatar:SetSize(38, 38)
+        avatar:SetPos(14, 18)
+        avatar:SetPlayer(ply, 38)
+        avatar:SetMouseInputEnabled(false)
+
+        local combo = vgui.Create("DComboBox", row)
+        combo:SetPos(270, 20)
+        combo:SetSize(130, 32)
+        combo:SetFont("MN_Text")
+        combo:SetValue(currentRank)
+        for _, rankName in ipairs(MemoNetwork.Ranks.Order or {"OWNER", "SUPERADMIN", "ADMIN", "MODERATOR", "DEVELOPER", "BUILDER", "VIP", "PLAYER"}) do
+            combo:AddChoice(rankName)
+        end
+
+        local save = vgui.Create("DButton", row)
+        save:SetPos(414, 20)
+        save:SetSize(70, 32)
+        save:SetText("")
+        save:SetCursor("hand")
+        save.Paint = function(self, pw, ph)
+            draw.RoundedBox(8, 0, 0, pw, ph, self:IsHovered() and Color(255, 170, 40) or theme.Orange)
+            draw.SimpleText("Save", "MN_Text", pw / 2, ph / 2, Color(10, 10, 10), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        end
+        save.DoClick = function()
+            SendRank(ply, combo:GetValue())
+        end
+
+        y = y + 84
+    end
+end
+
+local function BuildPermissions(content)
+    local theme = MemoNetwork.Theme
+    local header = vgui.Create("DPanel", content)
+    header:SetPos(0, 0)
+    header:SetSize(512, 54)
+    header.Paint = function(_, w, h)
+        draw.RoundedBox(10, 0, 0, w, h, theme.PanelLight)
+        draw.SimpleText("Permissions", "MN_Subtitle", 18, h / 2, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("Read-only overview", "MN_Small", w - 18, h / 2, theme.Muted, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+    end
+
+    local scroll = vgui.Create("DScrollPanel", content)
+    scroll:SetPos(0, 70)
+    scroll:SetSize(512, 350)
+
+    local ordered = {}
+    for key, data in pairs(MemoNetwork.Ranks and MemoNetwork.Ranks.Definitions or {}) do
+        ordered[#ordered + 1] = {key = key, data = data}
+    end
+    table.sort(ordered, function(a, b) return (a.data.sort or 99) < (b.data.sort or 99) end)
+
+    local y = 0
+    for _, item in ipairs(ordered) do
+        local rank = item.data
+        local perms = table.concat(rank.permissions or {}, ", ")
+        if perms == "" then perms = "No admin permissions" end
+        local row = vgui.Create("DPanel", scroll)
+        row:SetPos(0, y)
+        row:SetSize(500, 72)
+        row.Paint = function(_, rw, rh)
+            draw.RoundedBox(10, 0, 0, rw, rh, theme.PanelLight)
+            draw.RoundedBox(6, 0, 0, 6, rh, rank.color or theme.Orange)
+            draw.SimpleText(rank.name or item.key, "MN_Subtitle", 18, 22, rank.color or theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText(perms, "MN_Small", 18, 52, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        end
+        y = y + 82
     end
 end
 
@@ -328,10 +473,7 @@ local function BuildBroadcast(content)
     end
     ActionButton(content, 0, 212, 160, 76, "Send", "Broadcast message", "broadcast", nil).DoClick = function()
         local msg = string.Trim(entry:GetText() or "")
-        if msg == "" then
-            if MemoNetwork.Notify then MemoNetwork.Notify("Broadcast is empty.", "error", "Admin", 3) end
-            return
-        end
+        if msg == "" then Notify("Broadcast is empty.", "error", "Admin") return end
         surface.PlaySound("buttons/button15.wav")
         SendAction("broadcast", msg)
         entry:SetText("")
@@ -371,6 +513,8 @@ local function BuildContent(content)
     content:Clear()
     if activeTab == "Dashboard" then BuildDashboard(content)
     elseif activeTab == "Players" then BuildPlayers(content)
+    elseif activeTab == "Ranks" then BuildRanks(content)
+    elseif activeTab == "Permissions" then BuildPermissions(content)
     elseif activeTab == "Tools" then BuildTools(content)
     elseif activeTab == "Cleanup" then BuildCleanup(content)
     elseif activeTab == "Maps" then BuildMaps(content)
@@ -380,12 +524,14 @@ local function BuildContent(content)
 end
 
 function MemoNetwork.Admin.Open()
-    if not IsAllowed() then if MemoNetwork.Notify then MemoNetwork.Notify("Admin panel is owner/admin only.", "error", "Admin", 3) end return end
+    if not IsAllowed() then Notify("Admin panel is owner/admin only.", "error", "Admin") return end
     if IsValid(panel) then panel:Remove() panel = nil return end
+
     local theme = MemoNetwork.Theme
     local cfg = MemoNetwork.Config
     local sw, sh = ScrW(), ScrH()
     local w, h = 860, 570
+
     panel = vgui.Create("DFrame")
     panel:SetSize(w, h)
     panel:SetPos((sw - w) / 2, (sh - h) / 2)
@@ -401,22 +547,27 @@ function MemoNetwork.Admin.Open()
         draw.SimpleText("MemoNetwork Admin", "MN_Title", 26, 27, Color(10, 10, 10), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         draw.SimpleText(cfg.Version or "Alpha", "MN_Text", 26, 55, Color(25, 25, 25), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end
+
     if MemoNetwork.UI and MemoNetwork.UI.CreateCloseButton then MemoNetwork.UI.CreateCloseButton(panel, w - 56, 20, function() panel:Remove() panel = nil end) end
+
     local sidebar = vgui.Create("DPanel", panel)
     sidebar:SetPos(18, 98)
     sidebar:SetSize(240, h - 116)
     sidebar.Paint = function(_, pw, ph) draw.RoundedBox(12, 0, 0, pw, ph, theme.Panel) end
+
     local content = vgui.Create("DPanel", panel)
     content:SetPos(278, 98)
     content:SetSize(w - 296, h - 116)
     content.Paint = function() end
     content.Rebuild = function(self) BuildContent(self) end
-    local tabs = {"Dashboard", "Players", "Tools", "Cleanup", "Maps", "Broadcast", "Logs"}
-    local y = 14
+
+    local tabs = {"Dashboard", "Players", "Ranks", "Permissions", "Tools", "Cleanup", "Maps", "Broadcast", "Logs"}
+    local y = 10
     for _, tab in ipairs(tabs) do
-        TabButton(sidebar, 16, y, 208, 44, tab, content)
-        y = y + 52
+        TabButton(sidebar, 16, y, 208, 40, tab, content)
+        y = y + 46
     end
+
     BuildContent(content)
 end
 
