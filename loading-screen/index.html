@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MemoNetwork Loading</title>
+  <style>
+    :root {
+      --orange: #ff9100;
+      --bg: #090d13;
+      --panel: rgba(18, 24, 34, .86);
+      --panel2: rgba(29, 38, 52, .78);
+      --text: #f4f4f4;
+      --muted: #9aa3af;
+      --green: #5adc78;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow: hidden;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255,145,0,.18), transparent 28%),
+        radial-gradient(circle at 80% 70%, rgba(255,145,0,.12), transparent 28%),
+        linear-gradient(135deg, #05070b, #101722 55%, #080b10);
+    }
+
+    .grid {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+      background-size: 42px 42px;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,.75), transparent 90%);
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 2;
+      height: 100vh;
+      display: grid;
+      grid-template-columns: 1.15fr .85fr;
+      gap: 34px;
+      padding: 54px;
+      align-items: center;
+    }
+
+    .hero, .side {
+      border: 1px solid rgba(255,255,255,.08);
+      background: var(--panel);
+      border-radius: 24px;
+      box-shadow: 0 20px 70px rgba(0,0,0,.4);
+      backdrop-filter: blur(12px);
+    }
+
+    .hero { padding: 46px; min-height: 470px; }
+    .side { padding: 28px; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255,145,0,.14);
+      color: var(--orange);
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      font-size: 13px;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 18px var(--green);
+    }
+
+    h1 {
+      margin: 30px 0 12px;
+      font-size: clamp(52px, 7vw, 92px);
+      line-height: .92;
+      letter-spacing: -0.06em;
+    }
+
+    h1 span { color: var(--orange); }
+
+    .subtitle {
+      margin: 0;
+      max-width: 720px;
+      color: var(--muted);
+      font-size: 21px;
+      line-height: 1.5;
+    }
+
+    .progress-card {
+      margin-top: 42px;
+      padding: 22px;
+      border-radius: 18px;
+      background: var(--panel2);
+    }
+
+    .progress-head {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+
+    .bar {
+      height: 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.08);
+      overflow: hidden;
+    }
+
+    .fill {
+      width: 45%;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #ff9100, #ffc15c);
+      box-shadow: 0 0 24px rgba(255,145,0,.55);
+      animation: load 3.5s ease-in-out infinite;
+    }
+
+    @keyframes load {
+      0% { width: 18%; }
+      50% { width: 78%; }
+      100% { width: 18%; }
+    }
+
+    .cards { display: grid; gap: 16px; }
+
+    .card {
+      padding: 18px;
+      border-radius: 16px;
+      background: var(--panel2);
+      border: 1px solid rgba(255,255,255,.06);
+    }
+
+    .label {
+      color: var(--muted);
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: .09em;
+      margin-bottom: 8px;
+    }
+
+    .value {
+      font-size: 22px;
+      font-weight: 800;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .rules {
+      margin-top: 18px;
+      padding: 0;
+      list-style: none;
+      color: var(--muted);
+      line-height: 1.9;
+    }
+
+    .rules li::before {
+      content: "•";
+      color: var(--orange);
+      margin-right: 10px;
+    }
+
+    .footer {
+      position: fixed;
+      left: 54px;
+      right: 54px;
+      bottom: 28px;
+      display: flex;
+      justify-content: space-between;
+      color: rgba(255,255,255,.45);
+      font-size: 13px;
+      z-index: 3;
+    }
+
+    @media (max-width: 900px) {
+      .wrap { grid-template-columns: 1fr; padding: 26px; }
+      .side { display: none; }
+      .footer { left: 26px; right: 26px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="grid"></div>
+
+  <main class="wrap">
+    <section class="hero">
+      <div class="badge"><span class="dot"></span> Connecting to server</div>
+      <h1>Memo<span>Network</span></h1>
+      <p class="subtitle">Welcome to the Industrial Sandbox. Build, test, experiment and enjoy a clean custom server experience.</p>
+
+      <div class="progress-card">
+        <div class="progress-head">
+          <span id="status">Preparing workshop content</span>
+          <span id="percent">Loading</span>
+        </div>
+        <div class="bar"><div class="fill"></div></div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <div class="cards">
+        <div class="card">
+          <div class="label">Player</div>
+          <div class="value" id="player">Joining player</div>
+        </div>
+        <div class="card">
+          <div class="label">Current map</div>
+          <div class="value" id="map">Loading map</div>
+        </div>
+        <div class="card">
+          <div class="label">Server</div>
+          <div class="value">Industrial Sandbox</div>
+        </div>
+        <div class="card">
+          <div class="label">Quick rules</div>
+          <ul class="rules">
+            <li>Be respectful to other players.</li>
+            <li>Do not grief other builds.</li>
+            <li>Clean up unused props.</li>
+            <li>Keep the server fun and relaxed.</li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <div class="footer">
+    <span>MemoNetwork Alpha 11.5</span>
+    <span>Discord: memocraft.nl/?c=Discord</span>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const steamid = params.get('steamid') || params.get('sid') || '';
+    const map = params.get('map') || params.get('m') || '';
+
+    if (steamid) document.getElementById('player').textContent = steamid;
+    if (map) document.getElementById('map').textContent = map;
+
+    const messages = [
+      'Preparing workshop content',
+      'Downloading required addons',
+      'Loading map assets',
+      'Initializing MemoNetwork',
+      'Almost ready'
+    ];
+
+    let index = 0;
+    setInterval(() => {
+      index = (index + 1) % messages.length;
+      document.getElementById('status').textContent = messages[index];
+    }, 2200);
+  </script>
+</body>
+</html>
