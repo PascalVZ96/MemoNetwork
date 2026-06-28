@@ -30,8 +30,12 @@ AddClient("memonetwork/client/cl_menu.lua")
 AddClient("memonetwork/client/cl_notifications.lua")
 AddClient("memonetwork/client/cl_links.lua")
 AddClient("memonetwork/client/cl_version.lua")
+AddClient("memonetwork/client/cl_events.lua")
+AddClient("memonetwork/client/cl_admin.lua")
 
 if SERVER then
     include("memonetwork/server/sv_commands.lua")
     include("memonetwork/server/sv_welcome.lua")
+    include("memonetwork/server/sv_events.lua")
+    include("memonetwork/server/sv_admin.lua")
 end

@@ -5,7 +5,7 @@ MemoNetwork.Config = MemoNetwork.Config or {}
 
 MemoNetwork.Config.ServerName = "MemoNetwork"
 MemoNetwork.Config.Subtitle = "Industrial Sandbox"
-MemoNetwork.Config.Version = "Alpha 9.0"
+MemoNetwork.Config.Version = "Alpha 9.1"
 
 MemoNetwork.Config.Website = "https://memocraft.nl"
 MemoNetwork.Config.Discord = "https://memocraft.nl/?c=Discord"
