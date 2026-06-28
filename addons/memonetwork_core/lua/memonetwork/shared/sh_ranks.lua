@@ -1,58 +1,21 @@
--- MemoNetwork Alpha 11.2 Rank + Permission Manager
+-- MemoNetwork Alpha 11.3 Rank + Permission Manager
+-- Supports config ranks, persisted runtime ranks and permissions.
 
 MemoNetwork = MemoNetwork or {}
 MemoNetwork.Ranks = MemoNetwork.Ranks or {}
 
 MemoNetwork.Ranks.Definitions = {
-    OWNER = {
-        name = "OWNER",
-        color = Color(255, 145, 0),
-        sort = 1,
-        permissions = {"*"}
-    },
-    SUPERADMIN = {
-        name = "SUPERADMIN",
-        color = Color(255, 105, 105),
-        sort = 2,
-        permissions = {"admin.open", "players.manage", "cleanup", "broadcast", "map.change", "map.restart", "logs.view"}
-    },
-    ADMIN = {
-        name = "ADMIN",
-        color = Color(80, 160, 255),
-        sort = 3,
-        permissions = {"admin.open", "players.manage", "cleanup", "broadcast", "logs.view"}
-    },
-    MODERATOR = {
-        name = "MODERATOR",
-        color = Color(120, 210, 255),
-        sort = 4,
-        permissions = {"admin.open", "players.inspect", "broadcast", "logs.view"}
-    },
-    DEVELOPER = {
-        name = "DEVELOPER",
-        color = Color(180, 120, 255),
-        sort = 5,
-        permissions = {"admin.open", "players.inspect", "logs.view"}
-    },
-    BUILDER = {
-        name = "BUILDER",
-        color = Color(90, 220, 120),
-        sort = 6,
-        permissions = {"players.inspect"}
-    },
-    VIP = {
-        name = "VIP",
-        color = Color(255, 210, 90),
-        sort = 7,
-        permissions = {"players.inspect"}
-    },
-    PLAYER = {
-        name = "PLAYER",
-        color = Color(230, 230, 230),
-        sort = 99,
-        permissions = {}
-    }
+    OWNER = {name = "OWNER", color = Color(255, 145, 0), sort = 1, permissions = {"*"}},
+    SUPERADMIN = {name = "SUPERADMIN", color = Color(255, 105, 105), sort = 2, permissions = {"admin.open", "players.manage", "cleanup", "broadcast", "map.change", "map.restart", "logs.view", "ranks.manage"}},
+    ADMIN = {name = "ADMIN", color = Color(80, 160, 255), sort = 3, permissions = {"admin.open", "players.manage", "cleanup", "broadcast", "logs.view"}},
+    MODERATOR = {name = "MODERATOR", color = Color(120, 210, 255), sort = 4, permissions = {"admin.open", "players.inspect", "broadcast", "logs.view"}},
+    DEVELOPER = {name = "DEVELOPER", color = Color(180, 120, 255), sort = 5, permissions = {"admin.open", "players.inspect", "logs.view"}},
+    BUILDER = {name = "BUILDER", color = Color(90, 220, 120), sort = 6, permissions = {"players.inspect"}},
+    VIP = {name = "VIP", color = Color(255, 210, 90), sort = 7, permissions = {"players.inspect"}},
+    PLAYER = {name = "PLAYER", color = Color(230, 230, 230), sort = 99, permissions = {}}
 }
+
+MemoNetwork.Ranks.Order = {"OWNER", "SUPERADMIN", "ADMIN", "MODERATOR", "DEVELOPER", "BUILDER", "VIP", "PLAYER"}
 
 local groupMap = {
     owner = "OWNER",
@@ -80,12 +43,22 @@ function MemoNetwork.Ranks.GetByName(name)
     return CopyRank(MemoNetwork.Ranks.Definitions[name] or MemoNetwork.Ranks.Definitions.PLAYER)
 end
 
+function MemoNetwork.Ranks.IsValidRank(name)
+    name = string.upper(tostring(name or ""))
+    return MemoNetwork.Ranks.Definitions[name] ~= nil
+end
+
 function MemoNetwork.Ranks.Get(ply)
     local cfg = MemoNetwork.Config or {}
     local default = cfg.DefaultRank or MemoNetwork.Ranks.Definitions.PLAYER
 
     if not IsValid(ply) or not ply:IsPlayer() then
         return CopyRank(default)
+    end
+
+    local networkRank = ply:GetNWString("MemoNetwork_Rank", "")
+    if networkRank ~= "" and MemoNetwork.Ranks.IsValidRank(networkRank) then
+        return MemoNetwork.Ranks.GetByName(networkRank)
     end
 
     local steamid = ply:SteamID()
