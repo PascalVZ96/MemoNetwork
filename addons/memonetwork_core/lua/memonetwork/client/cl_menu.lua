@@ -1,8 +1,13 @@
--- MemoNetwork Lite Dashboard V3.1
--- Fixes sidebar alignment and prevents buttons from overflowing outside the sidebar.
+-- MemoNetwork Lite Dashboard V3.2
+-- Adds clickable Website/Discord links via gui.OpenURL.
 
 local menu
 local activePage = "Home"
+
+local function IsURL(value)
+    value = tostring(value or "")
+    return string.StartWith(value, "http://") or string.StartWith(value, "https://")
+end
 
 local function CloseMenu()
     if IsValid(menu) then
@@ -41,7 +46,6 @@ local function Tile(parent, x, y, w, h, title, subtitle, accent, onClick)
         draw.RoundedBox(10, 0, 0, pw, ph, bg)
         draw.RoundedBox(8, 0, 0, 6 + self.HoverAmount * 4, ph, accent or theme.Orange)
 
-        -- Fixed, readable alignment
         draw.SimpleText(title, "MN_Subtitle", 20, 20, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         draw.SimpleText(subtitle, "MN_Small", 20, 42, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end
@@ -94,13 +98,13 @@ local function DrawPageContent(panel, page)
             }
         elseif page == "Workshop" then
             title = "Workshop"
-            lines = {cfg.Workshop or "Coming soon."}
+            lines = {cfg.Workshop or "Coming soon.", "", "Click this panel to open the link when available."}
         elseif page == "Discord" then
             title = "Discord"
-            lines = {cfg.Discord or "Coming soon."}
+            lines = {cfg.Discord or "Coming soon.", "", "Click this panel to open Discord."}
         elseif page == "Website" then
             title = "Website"
-            lines = {cfg.Website or "Coming soon."}
+            lines = {cfg.Website or "Coming soon.", "", "Click this panel to open the website."}
         elseif page == "Settings" then
             title = "Settings"
             lines = {
@@ -115,6 +119,16 @@ local function DrawPageContent(panel, page)
         for _, line in ipairs(lines) do
             draw.SimpleText(line, "MN_Text", 24, y, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
             y = y + 30
+        end
+    end
+
+    content.OnMousePressed = function()
+        if page == "Discord" and IsURL(cfg.Discord) then
+            gui.OpenURL(cfg.Discord)
+        elseif page == "Website" and IsURL(cfg.Website) then
+            gui.OpenURL(cfg.Website)
+        elseif page == "Workshop" and IsURL(cfg.Workshop) then
+            gui.OpenURL(cfg.Workshop)
         end
     end
 end
@@ -173,8 +187,8 @@ local function OpenMenu()
         {"Rules", "Read server rules"},
         {"Build", "Builder tips"},
         {"Workshop", "Required addons"},
-        {"Discord", "Community link"},
-        {"Website", "Server website"},
+        {"Discord", "Open Discord"},
+        {"Website", "Open website"},
         {"Settings", "Client options"}
     }
 
@@ -187,6 +201,14 @@ local function OpenMenu()
         Tile(sidebar, 16, by, 218, buttonH, data[1], data[2], theme.Orange, function()
             activePage = data[1]
             DrawPageContent(content, activePage)
+
+            if activePage == "Discord" and IsURL(cfg.Discord) then
+                gui.OpenURL(cfg.Discord)
+            elseif activePage == "Website" and IsURL(cfg.Website) then
+                gui.OpenURL(cfg.Website)
+            elseif activePage == "Workshop" and IsURL(cfg.Workshop) then
+                gui.OpenURL(cfg.Workshop)
+            end
         end)
 
         by = by + buttonH + gap
@@ -197,12 +219,12 @@ end
 
 concommand.Add("mn_menu", OpenMenu)
 
-hook.Add("ShowHelp", "MemoNetwork_ShowHelp_DashboardV31", function()
+hook.Add("ShowHelp", "MemoNetwork_ShowHelp_DashboardV32", function()
     OpenMenu()
     return true
 end)
 
-hook.Add("OnPlayerChat", "MemoNetwork_MenuChat_DashboardV31", function(ply, text)
+hook.Add("OnPlayerChat", "MemoNetwork_MenuChat_DashboardV32", function(ply, text)
     if ply ~= LocalPlayer() then return end
 
     text = string.Trim(string.lower(text or ""))

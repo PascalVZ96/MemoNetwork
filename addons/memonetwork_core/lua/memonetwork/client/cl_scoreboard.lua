@@ -1,11 +1,23 @@
 -- MemoNetwork Lite Scoreboard V2
--- Patch: fixes rank text alignment/readability by using a single-line row layout.
+-- Owner SteamID support added.
 
 local board
 local playerList
 
+local function IsOwner(ply)
+    return IsValid(ply)
+        and MemoNetwork
+        and MemoNetwork.Config
+        and MemoNetwork.Config.Owners
+        and MemoNetwork.Config.Owners[ply:SteamID()]
+end
+
 local function GetRank(ply)
     if not IsValid(ply) then return "Player", Color(220, 220, 220) end
+
+    if IsOwner(ply) then
+        return "Owner", Color(255, 145, 0)
+    end
 
     local group = "player"
 
@@ -86,13 +98,8 @@ local function BuildPlayerList(parent)
 
             draw.RoundedBox(8, 0, 0, rw, rh, theme.PanelLight or Color(30, 38, 48, 220))
 
-            -- Name column
             draw.SimpleText(IsValid(ply) and ply:Nick() or "Unknown", "MN_Text", 58, rh / 2, theme.Text or color_white, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-
-            -- Rank column, centered and fully readable
             draw.SimpleText(rankText, "MN_Text", rw - 170, rh / 2, rankColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-
-            -- Ping column
             draw.SimpleText(ping .. " ms", "MN_Text", rw - 16, rh / 2, PingColor(ping), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
         end
 

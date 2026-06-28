@@ -10,6 +10,11 @@ MemoNetwork.Config.Website = "https://memocraft.nl"
 MemoNetwork.Config.Discord = "https://memocraft.nl/?c=Discord"
 MemoNetwork.Config.Workshop = "Coming soon"
 
+-- Owner SteamIDs
+MemoNetwork.Config.Owners = {
+    ["STEAM_0:1:69073790"] = true
+}
+
 MemoNetwork.Config.ShowFPS = true
 MemoNetwork.Config.ShowPing = true
 MemoNetwork.Config.ShowPlayers = true
