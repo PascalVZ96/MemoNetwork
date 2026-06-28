@@ -5,7 +5,7 @@ MemoNetwork.Config = MemoNetwork.Config or {}
 
 MemoNetwork.Config.ServerName = "MemoNetwork"
 MemoNetwork.Config.Subtitle = "Industrial Sandbox"
-MemoNetwork.Config.Version = "Alpha 10.0-dev"
+MemoNetwork.Config.Version = "Alpha 10.3-dev"
 
 MemoNetwork.Config.Website = "https://memocraft.nl"
 MemoNetwork.Config.Discord = "https://memocraft.nl/?c=Discord"
@@ -38,6 +38,16 @@ MemoNetwork.Config.Modules = {
     Admin = true,
     Events = true,
     Links = true
+}
+
+-- Maps shown in the F6 Admin Panel.
+-- Add/remove maps here when the server map pool changes.
+MemoNetwork.Config.Maps = {
+    {name = "Construct", map = "gm_construct", description = "Default Sandbox build map"},
+    {name = "Flatgrass", map = "gm_flatgrass", description = "Simple open build map"},
+    {name = "Big City", map = "gm_bigcity", description = "Large city sandbox map"},
+    {name = "Fork", map = "gm_fork", description = "Large scenic sandbox map"},
+    {name = "Mall Parking", map = "gm_mallparking", description = "Parking/build test map"}
 }
 
 MemoNetwork.Config.ShowFPS = true
