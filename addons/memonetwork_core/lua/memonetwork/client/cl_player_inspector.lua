@@ -1,5 +1,5 @@
--- MemoNetwork Alpha 10.1 Player Inspector
--- Opens from the scoreboard and prepares future admin player actions.
+-- MemoNetwork Alpha 10.2 Player Inspector
+-- Cleaner layout, aligned admin buttons and extra quick actions.
 
 MemoNetwork = MemoNetwork or {}
 MemoNetwork.PlayerInspector = MemoNetwork.PlayerInspector or {}
@@ -48,32 +48,58 @@ local function DetailLine(parent, y, label, value, valueColor)
 end
 
 local function AdminButton(parent, x, y, w, h, title, subtitle, action, target)
-    if MemoNetwork.UI and MemoNetwork.UI.CreateButton then
-        return MemoNetwork.UI.CreateButton(parent, x, y, w, h, title, subtitle, function()
-            SendAdminAction(action, target)
-        end)
-    end
-
     local theme = MemoNetwork.Theme
     local btn = vgui.Create("DButton", parent)
     btn:SetPos(x, y)
     btn:SetSize(w, h)
     btn:SetText("")
+    btn:SetCursor("hand")
     btn.HoverAmount = 0
+
     btn.Paint = function(self, pw, ph)
-        self.HoverAmount = Lerp(FrameTime() * 10, self.HoverAmount, self:IsHovered() and 1 or 0)
+        self.HoverAmount = Lerp(FrameTime() * 10, self.HoverAmount or 0, self:IsHovered() and 1 or 0)
+
         local bg = Color(18 + self.HoverAmount * 10, 24 + self.HoverAmount * 10, 32 + self.HoverAmount * 10, 235)
+        local barH = 4 + self.HoverAmount * 2
+
         draw.RoundedBox(10, 0, 0, pw, ph, bg)
-        draw.RoundedBox(8, 0, ph - 5, pw, 5, theme.Orange)
-        draw.SimpleText(title, "MN_Subtitle", 16, 20, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText(subtitle, "MN_Text", 16, 45, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.RoundedBoxEx(8, 0, ph - barH, pw, barH, theme.Orange, false, false, true, true)
+        draw.SimpleText(title, "MN_Subtitle", 14, 19, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(subtitle, "MN_Small", 14, 43, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end
+
     btn.DoClick = function()
         surface.PlaySound("buttons/button15.wav")
         SendAdminAction(action, target)
     end
 
     return btn
+end
+
+local function AddAdminActions(parent, y, target)
+    local actions = {
+        {"Teleport", "Go to player", "teleport"},
+        {"Bring", "Bring here", "bring"},
+        {"Heal", "HP + armor", "heal_target"},
+        {"Freeze", "Toggle freeze", "freeze"},
+        {"Slay", "Kill player", "slay"},
+        {"Spectate", "Watch player", "spectate"}
+    }
+
+    local margin = 24
+    local gap = 10
+    local cols = 3
+    local btnW = math.floor((parent:GetWide() - (margin * 2) - (gap * (cols - 1))) / cols)
+    local btnH = 58
+
+    for i, data in ipairs(actions) do
+        local col = (i - 1) % cols
+        local row = math.floor((i - 1) / cols)
+        local x = margin + col * (btnW + gap)
+        local by = y + row * (btnH + gap)
+
+        AdminButton(parent, x, by, btnW, btnH, data[1], data[2], data[3], target)
+    end
 end
 
 function MemoNetwork.PlayerInspector.Open(target)
@@ -87,7 +113,7 @@ function MemoNetwork.PlayerInspector.Open(target)
     local theme = MemoNetwork.Theme
     local cfg = MemoNetwork.Config or {}
     local sw, sh = ScrW(), ScrH()
-    local w, h = 560, 430
+    local w, h = 620, 520
     local rank = MemoNetwork.Ranks and MemoNetwork.Ranks.Get(target) or {name = "PLAYER", color = theme.Text}
     local aliveText = target:Alive() and "Alive" or "Dead"
     local aliveColor = target:Alive() and (theme.Success or Color(75, 200, 120)) or Color(255, 90, 90)
@@ -100,57 +126,56 @@ function MemoNetwork.PlayerInspector.Open(target)
     inspector:ShowCloseButton(false)
     inspector:MakePopup()
     inspector:SetAlpha(0)
-    inspector:AlphaTo(255, 0.10, 0)
+    inspector:AlphaTo(255, 0.12, 0)
 
     inspector.Paint = function(_, pw, ph)
         draw.RoundedBox(14, 0, 0, pw, ph, theme.Background)
-        draw.RoundedBoxEx(14, 0, 0, pw, 74, theme.Orange, true, true, false, false)
-        draw.SimpleText("Player Inspector", "MN_Title", 26, 26, Color(10, 10, 10), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText(cfg.Version or "Alpha 10", "MN_Text", 26, 52, Color(25, 25, 25), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.RoundedBoxEx(14, 0, 0, pw, 78, theme.Orange, true, true, false, false)
+        draw.SimpleText("Player Inspector", "MN_Title", 26, 27, Color(10, 10, 10), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(cfg.Version or "Alpha 10", "MN_Text", 26, 55, Color(25, 25, 25), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end
 
     if MemoNetwork.UI and MemoNetwork.UI.CreateCloseButton then
-        MemoNetwork.UI.CreateCloseButton(inspector, w - 56, 18, function()
+        MemoNetwork.UI.CreateCloseButton(inspector, w - 56, 20, function()
             inspector:Remove()
             inspector = nil
         end)
     end
 
     local avatar = vgui.Create("AvatarImage", inspector)
-    avatar:SetSize(84, 84)
-    avatar:SetPos(24, 100)
-    avatar:SetPlayer(target, 84)
+    avatar:SetSize(96, 96)
+    avatar:SetPos(24, 102)
+    avatar:SetPlayer(target, 96)
 
     local card = vgui.Create("DPanel", inspector)
-    card:SetPos(124, 100)
-    card:SetSize(w - 148, 84)
+    card:SetPos(136, 102)
+    card:SetSize(w - 160, 96)
     card.Paint = function(_, pw, ph)
         draw.RoundedBox(10, 0, 0, pw, ph, theme.PanelLight)
-        draw.SimpleText(IsValid(target) and target:Nick() or "Unknown", "MN_Title", 18, 25, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText(rank.name or "PLAYER", "MN_Text", 18, 57, rank.color or theme.Orange, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(IsValid(target) and target:Nick() or "Unknown", "MN_Title", 18, 30, theme.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(rank.name or "PLAYER", "MN_Text", 18, 66, rank.color or theme.Orange, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(IsValid(target) and target:SteamID() or "Unknown", "MN_Small", pw - 18, 66, theme.Muted, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
     end
 
     local details = vgui.Create("DPanel", inspector)
-    details:SetPos(24, 204)
+    details:SetPos(24, 218)
     details:SetSize(w - 48, 146)
     details.Paint = function(_, pw, ph)
         draw.RoundedBox(10, 0, 0, pw, ph, theme.PanelLight)
     end
 
+    local ping = IsValid(target) and target:Ping() or 0
     DetailLine(details, 16, "SteamID", IsValid(target) and target:SteamID() or "Unknown", theme.Text)
-    DetailLine(details, 48, "Ping", IsValid(target) and (target:Ping() .. " ms") or "0 ms", MemoNetwork.Player and MemoNetwork.Player.GetPingColor(target:Ping()) or theme.Text)
+    DetailLine(details, 48, "Ping", ping .. " ms", MemoNetwork.Player and MemoNetwork.Player.GetPingColor(ping) or theme.Text)
     DetailLine(details, 80, "Status", aliveText, aliveColor)
     DetailLine(details, 112, "Team", IsValid(target) and team.GetName(target:Team()) or "Unknown", theme.Text)
 
     if IsAdminAllowed() then
-        AdminButton(inspector, 24, 366, 120, 46, "Teleport", "Go to player", "teleport", target)
-        AdminButton(inspector, 154, 366, 120, 46, "Bring", "Bring here", "bring", target)
-        AdminButton(inspector, 284, 366, 120, 46, "Heal", "HP + armor", "heal_target", target)
-        AdminButton(inspector, 414, 366, 120, 46, "Freeze", "Toggle freeze", "freeze", target)
+        AddAdminActions(inspector, 384, target)
     else
         local info = vgui.Create("DPanel", inspector)
-        info:SetPos(24, 366)
-        info:SetSize(w - 48, 46)
+        info:SetPos(24, 388)
+        info:SetSize(w - 48, 58)
         info.Paint = function(_, pw, ph)
             draw.RoundedBox(10, 0, 0, pw, ph, theme.Panel)
             draw.SimpleText("Admin actions are hidden for normal players.", "MN_Text", 18, ph / 2, theme.Muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
