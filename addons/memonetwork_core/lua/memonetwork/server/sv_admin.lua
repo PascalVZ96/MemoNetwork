@@ -1,5 +1,5 @@
 -- MemoNetwork Lite Admin Tools
--- Small owner/admin action system for a private Sandbox server.
+-- Alpha 10.1: supports self actions and basic target actions from Player Inspector.
 
 util.AddNetworkString("MemoNetwork_AdminAction")
 util.AddNetworkString("MemoNetwork_AdminResult")
@@ -19,6 +19,13 @@ local function SendResult(ply, message, kind)
     net.Send(ply)
 end
 
+local function ReadOptionalTarget()
+    local ok, target = pcall(net.ReadEntity)
+    if ok and IsValid(target) and target:IsPlayer() then
+        return target
+    end
+end
+
 net.Receive("MemoNetwork_AdminAction", function(_, ply)
     if not IsAllowed(ply) then
         SendResult(ply, "You do not have permission.", "error")
@@ -26,6 +33,7 @@ net.Receive("MemoNetwork_AdminAction", function(_, ply)
     end
 
     local action = net.ReadString()
+    local target = ReadOptionalTarget()
 
     if action == "cleanup" then
         game.CleanUpMap(false)
@@ -50,6 +58,19 @@ net.Receive("MemoNetwork_AdminAction", function(_, ply)
         ply:SetHealth(100)
         ply:SetArmor(100)
         SendResult(ply, "Health and armor restored.", "success")
+    elseif action == "teleport" and IsValid(target) then
+        ply:SetPos(target:GetPos() + Vector(45, 0, 0))
+        SendResult(ply, "Teleported to " .. target:Nick() .. ".", "success")
+    elseif action == "bring" and IsValid(target) then
+        target:SetPos(ply:GetPos() + ply:GetForward() * 80)
+        SendResult(ply, "Brought " .. target:Nick() .. ".", "success")
+    elseif action == "heal_target" and IsValid(target) then
+        target:SetHealth(100)
+        target:SetArmor(100)
+        SendResult(ply, "Healed " .. target:Nick() .. ".", "success")
+    elseif action == "freeze" and IsValid(target) then
+        target:SetMoveType(target:GetMoveType() == MOVETYPE_NONE and MOVETYPE_WALK or MOVETYPE_NONE)
+        SendResult(ply, "Toggled freeze for " .. target:Nick() .. ".", "success")
     else
         SendResult(ply, "Unknown admin action.", "error")
     end
