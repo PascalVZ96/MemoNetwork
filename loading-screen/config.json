@@ -1,16 +1,16 @@
 {
   "serverName": "MemoNetwork",
   "subtitle": "Industrial Sandbox",
-  "version": "Alpha 12",
+  "version": "Alpha 18",
   "discord": "https://memocraft.nl/?c=Discord",
   "website": "https://memocraft.nl",
   "workshop": "#",
-  "motd": "Welcome to MemoNetwork. Build, test and enjoy the Industrial Sandbox.",
+  "motd": "Welcome to MemoNetwork Alpha 18. Build, test and manage the Industrial Sandbox.",
   "news": [
-    "Rank Manager inside F6",
-    "Permission System",
-    "Advanced Cleanup",
-    "Live Admin Logs",
-    "Cinematic Loading Screen"
+    "Alpha 18 Build Manager preparation",
+    "F8 Control Center stable rebuild",
+    "F9 Map Manager",
+    "Build Assistant",
+    "Sandbox admin tools"
   ]
 }
