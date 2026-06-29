@@ -58,22 +58,22 @@
   <div class="overlay"></div><div class="grid"></div>
   <main class="wrap">
     <section class="hero">
-      <div class="badge"><span class="dot"></span> Joining MemoNetwork</div>
+      <div class="badge"><span class="dot"></span> Joining MemoNetwork Alpha 18</div>
       <h1>Memo<span>Network</span></h1>
       <div class="welcome" id="welcomeLabel">Preparing your session</div>
       <div class="player-name" id="player">Connecting...</div>
-      <p class="subtitle">Industrial Sandbox with custom HUD, admin tools, ranks, events and a clean MemoNetwork experience.</p>
-      <div class="progress-card"><div class="progress-head"><span id="status">Preparing workshop content</span><span id="percent">0%</span></div><div class="bar"><div class="fill" id="fill"></div></div></div>
+      <p class="subtitle">Industrial Sandbox with custom HUD, admin tools, ranks, map management, build tools and a clean MemoNetwork experience.</p>
+      <div class="progress-card"><div class="progress-head"><span id="status">Preparing sandbox framework</span><span id="percent">0%</span></div><div class="bar"><div class="fill" id="fill"></div></div></div>
     </section>
     <aside class="side"><div class="cards">
       <div class="card"><div class="label">Current map</div><div class="value" id="map">Loading map</div></div>
       <div class="card"><div class="label">Gamemode</div><div class="value" id="gamemode">Sandbox</div></div>
-      <div class="card"><div class="label">Server version</div><div class="value" id="version">Alpha 13.1</div></div>
-      <div class="news"><div class="label">What's new</div><ul class="news-list" id="news"><li>Community Dashboard</li><li>Rank Manager inside F6</li><li>Permission System</li><li>Cinematic Loading Screen</li><li>Join Intro after loading</li></ul></div>
+      <div class="card"><div class="label">Server version</div><div class="value" id="version">Alpha 18</div></div>
+      <div class="news"><div class="label">What's new</div><ul class="news-list" id="news"><li>Build Manager preparation</li><li>Stable F8 Control Center</li><li>F9 Map Manager</li><li>Build Assistant</li><li>Sandbox admin tools</li></ul></div>
       <div class="card"><div class="label">Links</div><div class="links"><button class="link" onclick="openLink('https://memocraft.nl')">Website</button><button class="link" onclick="openLink('https://memocraft.nl/?c=Discord')">Discord</button><button class="link" onclick="openLink('#')">Workshop</button></div></div>
     </div></aside>
   </main>
-  <div class="footer"><span>MemoNetwork <span class="hint">Alpha 13.1</span></span><span id="download">Initializing...</span></div>
+  <div class="footer"><span>MemoNetwork <span class="hint">Alpha 18</span></span><span id="download">Initializing...</span></div>
   <script>
     const params = new URLSearchParams(window.location.search);
     const videoByMap = { gm_construct: 'assets/videos/gm_construct.mp4', gm_flatgrass: 'assets/videos/gm_flatgrass.mp4', gm_bigcity: 'assets/videos/gm_bigcity.mp4', gm_fork: 'assets/videos/gm_fork.mp4' };
@@ -127,7 +127,7 @@
     }
 
     function openLink(url) { if (!url || url === '#') return; window.location.href = url; }
-    const messages = ['Preparing workshop content', 'Downloading Wiremod and tools', 'Loading map assets', 'Initializing MemoNetwork HUD', 'Loading ranks and permissions', 'Almost ready'];
+    const messages = ['Preparing sandbox framework', 'Downloading workshop content', 'Loading map assets', 'Initializing MemoNetwork HUD', 'Loading ranks and permissions', 'Preparing build tools', 'Almost ready'];
     let progress = 0; let messageIndex = 0;
     function tickProgress() { progress = Math.min(98, progress + Math.random() * 8 + 2); fillEl.style.width = progress.toFixed(0) + '%'; percentEl.textContent = progress.toFixed(0) + '%'; downloadEl.textContent = messages[messageIndex]; statusEl.textContent = messages[messageIndex]; messageIndex = (messageIndex + 1) % messages.length; }
     window.SetStatusChanged = function(status) { if (status) { statusEl.textContent = status; downloadEl.textContent = status; } };
