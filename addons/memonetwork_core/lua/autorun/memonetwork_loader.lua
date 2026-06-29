@@ -1,4 +1,4 @@
--- MemoNetwork Alpha 15.2 Loader
+-- MemoNetwork Alpha 16 Loader
 
 MemoNetwork = MemoNetwork or {}
 
@@ -32,6 +32,8 @@ AddShared("memonetwork/shared/sh_player.lua")
 AddClient("memonetwork/client/cl_fonts.lua")
 AddClient("memonetwork/client/cl_settings.lua")
 AddClient("memonetwork/client/cl_ui.lua")
+AddClient("memonetwork/client/cl_widgets.lua")
+AddClient("memonetwork/client/cl_server_metrics.lua")
 AddClient("memonetwork/client/cl_hud.lua")
 AddClient("memonetwork/client/cl_voice.lua")
 AddClient("memonetwork/client/cl_scoreboard.lua")
