@@ -1,11 +1,10 @@
 {
-  "title": "Alpha 13 Community Update",
+  "title": "Alpha 19 Build Manager Update",
   "items": [
-    "New F1 Community Dashboard",
-    "Profile page foundation",
-    "Dynamic news support",
-    "Server gallery page",
-    "Events and challenges preview",
-    "Settings hub polish"
+    "New F10 Build Manager",
+    "Accurate prop ownership tracking",
+    "Live build statistics per player",
+    "Improved Build Assistant owner display",
+    "Foundation for per-player cleanup and freeze tools"
   ]
 }
