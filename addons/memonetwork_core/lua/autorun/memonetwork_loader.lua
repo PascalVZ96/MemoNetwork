@@ -1,4 +1,4 @@
--- MemoNetwork Alpha 19 Loader
+-- MemoNetwork Alpha 19.1 Loader
 
 MemoNetwork = MemoNetwork or {}
 
@@ -61,3 +61,4 @@ AddServer("memonetwork/server/sv_events.lua")
 AddServer("memonetwork/server/sv_ranks.lua")
 AddServer("memonetwork/server/sv_admin.lua")
 AddServer("memonetwork/server/sv_ownership.lua")
+AddServer("memonetwork/server/sv_physgun.lua")
