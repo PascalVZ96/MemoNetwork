@@ -1,4 +1,4 @@
--- MemoNetwork Alpha 15.1 Build Assistant
+-- MemoNetwork Alpha 19 Build Assistant
 -- Lightweight Sandbox helper showing info about the entity you are looking at.
 
 MemoNetwork = MemoNetwork or {}
@@ -34,23 +34,56 @@ local function SafeNWEntity(ent, key)
     if ok and IsValid(value) and value:IsPlayer() then return value end
 end
 
+local function SafeNWString(ent, key)
+    if not IsValid(ent) or not ent.GetNWString then return "" end
+    local ok, value = pcall(ent.GetNWString, ent, key, "")
+    if ok then return tostring(value or "") end
+    return ""
+end
+
 local function EntityOwner(ent)
     if not IsValid(ent) then return "Unknown" end
 
+    -- MemoNetwork server-side ownership registry is the most reliable source.
+    local memoOwner = SafeNWEntity(ent, "MemoNetworkOwner")
+    if IsValid(memoOwner) then return memoOwner:Nick() end
+
+    local memoOwnerName = SafeNWString(ent, "MemoNetworkOwnerName")
+    if memoOwnerName ~= "" then return memoOwnerName end
+
+    -- Prop protection addons.
     if ent.CPPIGetOwner then
         local ok, owner = pcall(ent.CPPIGetOwner, ent)
         if ok and IsValid(owner) and owner:IsPlayer() then return owner:Nick() end
     end
 
+    -- Common legacy/fallback owner NW values.
     local owner = SafeNWEntity(ent, "Owner") or SafeNWEntity(ent, "owner") or SafeNWEntity(ent, "Creator")
     if IsValid(owner) then return owner:Nick() end
+
+    local ownerName = SafeNWString(ent, "OwnerName")
+    if ownerName ~= "" then return ownerName end
 
     if ent.GetCreator then
         local ok, creator = pcall(ent.GetCreator, ent)
         if ok and IsValid(creator) and creator:IsPlayer() then return creator:Nick() end
     end
 
+    if ent.GetOwner then
+        local ok, own = pcall(ent.GetOwner, ent)
+        if ok and IsValid(own) and own:IsPlayer() then return own:Nick() end
+    end
+
     return "Unknown"
+end
+
+local function SpawnAge(ent)
+    if not IsValid(ent) or not ent.GetNWFloat then return nil end
+    local spawnedAt = ent:GetNWFloat("MemoNetworkSpawnedAt", 0)
+    if spawnedAt <= 0 then return nil end
+    local age = math.max(0, CurTime() - spawnedAt)
+    if age < 60 then return math.floor(age) .. "s ago" end
+    return math.floor(age / 60) .. "m ago"
 end
 
 local function FrozenState(ent)
@@ -87,10 +120,11 @@ hook.Add("HUDPaint", "MemoNetwork_BuildAssistant", function()
 
     local theme = MemoNetwork.Theme or {}
     local sw, sh = ScrW(), ScrH()
-    local w, h = 360, IsAdminAllowed() and 210 or 178
+    local w, h = 360, IsAdminAllowed() and 234 or 202
     local x, y = sw - w - 28, sh * 0.34
     local class = ent:GetClass() or "unknown"
     local model = NiceModel(ent:GetModel())
+    local age = SpawnAge(ent)
 
     draw.RoundedBox(14, x, y, w, h, Color(10, 14, 22, 225))
     draw.RoundedBoxEx(14, x, y, w, 6, theme.Orange or Color(255, 145, 0), true, true, false, false)
@@ -106,6 +140,10 @@ hook.Add("HUDPaint", "MemoNetwork_BuildAssistant", function()
         {"Constraints", ConstraintCount(ent)}
     }
 
+    if age then
+        table.insert(lines, {"Spawned", age})
+    end
+
     local ly = y + 84
     for _, row in ipairs(lines) do
         draw.SimpleText(row[1], "MN_Text", x + 18, ly, theme.Muted or Color(160,165,175), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
@@ -114,7 +152,7 @@ hook.Add("HUDPaint", "MemoNetwork_BuildAssistant", function()
     end
 
     if IsAdminAllowed() then
-        draw.SimpleText("Admin: use remover/toolgun or F6 cleanup for actions", "MN_Small", x + 18, y + h - 20, theme.Orange or Color(255,145,0), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("Admin: owner tracking ready for Alpha 19 Build Manager", "MN_Small", x + 18, y + h - 20, theme.Orange or Color(255,145,0), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end
 end)
 
