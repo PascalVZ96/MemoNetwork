@@ -1,5 +1,5 @@
--- MemoNetwork Alpha 19 Build Manager
--- Standalone build/entity overview for Sandbox administration.
+-- MemoNetwork Alpha 19.0.1 Build Manager
+-- Stable standalone F10 build/entity overview. No main DScrollPanel dependency.
 
 MemoNetwork = MemoNetwork or {}
 MemoNetwork.BuildManager = MemoNetwork.BuildManager or {}
@@ -15,7 +15,6 @@ local function Theme()
         text = t.Text or Color(245, 245, 245),
         muted = t.Muted or Color(155, 165, 180),
         bg = t.Background or Color(10, 14, 22, 238),
-        panel = t.Panel or Color(14, 20, 28, 238),
         panel2 = t.PanelLight or Color(20, 28, 38, 238),
         success = t.Success or Color(90, 220, 120),
         danger = Color(255, 90, 90),
@@ -42,32 +41,19 @@ local function Notify(message, kind)
     end
 end
 
-local function SendAction(action, payload)
-    net.Start("MemoNetwork_AdminAction")
-        net.WriteString(action)
-        if payload then net.WriteString(payload) end
-    net.SendToServer()
-end
-
 local function SendTargetAction(action, target)
-    if not IsValid(target) then Notify("No player selected.", "error") return end
+    if not IsValid(target) then Notify("No online player selected.", "error") return end
     net.Start("MemoNetwork_AdminAction")
         net.WriteString(action)
         net.WriteEntity(target)
     net.SendToServer()
 end
 
-local function Confirm(title, text, fn)
-    Derma_Query(text, title, "Yes", fn, "No")
-end
-
 local function OwnerInfo(ent)
     if not IsValid(ent) then return "Unknown", "unknown", nil end
 
     local owner = ent:GetNWEntity("MemoNetworkOwner")
-    if IsValid(owner) and owner:IsPlayer() then
-        return owner:Nick(), owner:SteamID(), owner
-    end
+    if IsValid(owner) and owner:IsPlayer() then return owner:Nick(), owner:SteamID(), owner end
 
     local name = ent:GetNWString("MemoNetworkOwnerName", "")
     local sid = ent:GetNWString("MemoNetworkOwnerSteamID", "")
@@ -75,16 +61,12 @@ local function OwnerInfo(ent)
 
     if ent.CPPIGetOwner then
         local ok, cppiOwner = pcall(ent.CPPIGetOwner, ent)
-        if ok and IsValid(cppiOwner) and cppiOwner:IsPlayer() then
-            return cppiOwner:Nick(), cppiOwner:SteamID(), cppiOwner
-        end
+        if ok and IsValid(cppiOwner) and cppiOwner:IsPlayer() then return cppiOwner:Nick(), cppiOwner:SteamID(), cppiOwner end
     end
 
     if ent.GetCreator then
         local ok, creator = pcall(ent.GetCreator, ent)
-        if ok and IsValid(creator) and creator:IsPlayer() then
-            return creator:Nick(), creator:SteamID(), creator
-        end
+        if ok and IsValid(creator) and creator:IsPlayer() then return creator:Nick(), creator:SteamID(), creator end
     end
 
     return "Unknown", "unknown", nil
@@ -100,12 +82,13 @@ local function EntityType(ent)
     if class == "gmod_lamp" or class == "gmod_light" or class == "light_dynamic" then return "lights" end
     if string.StartWith(class, "gmod_wire") or string.find(class, "wire", 1, true) then return "wire" end
     if class == "env_sprite" or class == "env_smoketrail" or class == "env_fire" or class == "env_explosion" or class == "info_particle_system" then return "effects" end
-    return "other"
+    if string.StartWith(class, "gmod_") then return "other" end
+    return "unknown"
 end
 
 local function IsBuildEntity(ent)
-    local t = EntityType(ent)
-    return t ~= "unknown" and t ~= "other" or (IsValid(ent) and string.StartWith(ent:GetClass() or "", "gmod_"))
+    if not IsValid(ent) or ent:IsWorld() or ent:IsPlayer() then return false end
+    return EntityType(ent) ~= "unknown"
 end
 
 local function ModelName(ent)
@@ -126,31 +109,23 @@ local function SpawnAge(ent)
     return math.floor(age / 3600) .. "h"
 end
 
-local function ConstraintCount(ent)
-    if not constraint or not constraint.GetTable then return 0 end
-    local ok, tbl = pcall(constraint.GetTable, ent)
-    if not ok or not istable(tbl) then return 0 end
-    return #tbl
-end
-
 local function ScanBuilds()
     local groups = {}
     local totals = {props=0, vehicles=0, npcs=0, ragdolls=0, effects=0, wire=0, lights=0, other=0, all=0, owned=0, unknown=0}
 
     for _, ent in ipairs(ents.GetAll()) do
-        if IsValid(ent) and not ent:IsWorld() and not ent:IsPlayer() and IsBuildEntity(ent) then
+        if IsBuildEntity(ent) then
             local ownerName, steamID, ownerPly = OwnerInfo(ent)
             steamID = steamID or "unknown"
             if steamID == "" then steamID = "unknown" end
-            if not groups[steamID] then
-                groups[steamID] = {
-                    steamID = steamID,
-                    ownerName = ownerName or "Unknown",
-                    owner = ownerPly,
-                    entities = {},
-                    counts = {props=0, vehicles=0, npcs=0, ragdolls=0, effects=0, wire=0, lights=0, other=0, all=0}
-                }
-            end
+
+            groups[steamID] = groups[steamID] or {
+                steamID = steamID,
+                ownerName = ownerName or "Unknown",
+                owner = ownerPly,
+                entities = {},
+                counts = {props=0, vehicles=0, npcs=0, ragdolls=0, effects=0, wire=0, lights=0, other=0, all=0}
+            }
 
             local g = groups[steamID]
             if ownerName and ownerName ~= "Unknown" then g.ownerName = ownerName end
@@ -167,9 +142,7 @@ local function ScanBuilds()
     end
 
     local list = {}
-    for _, group in pairs(groups) do
-        list[#list + 1] = group
-    end
+    for _, group in pairs(groups) do list[#list + 1] = group end
     table.sort(list, function(a, b)
         if a.steamID == "unknown" then return false end
         if b.steamID == "unknown" then return true end
@@ -181,8 +154,7 @@ end
 local function MatchesGroup(group)
     local q = string.Trim(string.lower(searchText or ""))
     if q == "" then return true end
-    return string.find(string.lower(group.ownerName or ""), q, 1, true)
-        or string.find(string.lower(group.steamID or ""), q, 1, true)
+    return string.find(string.lower(group.ownerName or ""), q, 1, true) or string.find(string.lower(group.steamID or ""), q, 1, true)
 end
 
 local function Box(parent, x, y, w, h, accent, paintExtra)
@@ -201,8 +173,8 @@ end
 local function Stat(parent, x, y, w, h, title, value, accent)
     local th = Theme()
     return Box(parent, x, y, w, h, accent or th.orange, function(_, pw, ph)
-        draw.SimpleText(string.upper(tostring(title or "STAT")), "MN_Small", 14, 17, th.muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText(tostring(value or "0"), "MN_Subtitle", 14, 44, accent or th.text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(string.upper(tostring(title or "STAT")), "MN_Small", 12, 16, th.muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(tostring(value or "0"), "MN_Subtitle", 12, 42, accent or th.text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end)
 end
 
@@ -231,70 +203,74 @@ local function Button(parent, x, y, w, h, title, subtitle, fn, danger)
 end
 
 local function SelectedGroup(groups)
-    for _, group in ipairs(groups) do
-        if group.steamID == selectedSteamID then return group end
-    end
+    for _, group in ipairs(groups) do if group.steamID == selectedSteamID then return group end end
     selectedSteamID = groups[1] and groups[1].steamID or nil
     return groups[1]
 end
 
-local function Build(parent)
+local function DrawError(parent, err)
+    parent:Clear()
+    local th = Theme()
+    Box(parent, 0, 0, 876, 160, th.danger, function(_, w, h)
+        draw.SimpleText("Build Manager Error", "MN_Title", 22, 34, th.text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(tostring(err), "MN_Text", 22, 76, th.danger, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("The panel stayed alive. Send this error if it repeats.", "MN_Small", 22, 112, th.muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    end)
+end
+
+local function BuildUnsafe(parent)
     parent:Clear()
     local th = Theme()
     local groups, totals = ScanBuilds()
     local visible = {}
-    for _, group in ipairs(groups) do
-        if MatchesGroup(group) then visible[#visible + 1] = group end
-    end
+    for _, group in ipairs(groups) do if MatchesGroup(group) then visible[#visible + 1] = group end end
     local selected = SelectedGroup(visible)
 
-    Box(parent, 0, 0, 876, 72, th.orange, function(_, w, h)
-        draw.SimpleText("Build Manager", "MN_Title", 20, 24, th.text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText("Alpha 19 ownership, build statistics and player cleanup tools", "MN_Text", 20, 52, th.muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText("Entities: " .. totals.all, "MN_Text", w - 20, 36, th.orange, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+    Box(parent, 0, 0, 876, 66, th.orange, function(_, w, h)
+        draw.SimpleText("Build Manager", "MN_Title", 20, 22, th.text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("Alpha 19 ownership and build statistics", "MN_Text", 20, 49, th.muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("Entities: " .. totals.all, "MN_Text", w - 20, 34, th.orange, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
     end)
 
-    Stat(parent, 0, 88, 116, 68, "Total", totals.all, th.orange)
-    Stat(parent, 126, 88, 116, 68, "Owned", totals.owned, th.success)
-    Stat(parent, 252, 88, 116, 68, "Unknown", totals.unknown, totals.unknown > 0 and th.warning or th.success)
-    Stat(parent, 378, 88, 116, 68, "Props", totals.props, Color(90,220,120))
-    Stat(parent, 504, 88, 116, 68, "Vehicles", totals.vehicles, th.blue)
-    Stat(parent, 630, 88, 116, 68, "Wire", totals.wire, Color(80,200,255))
-    Stat(parent, 756, 88, 116, 68, "Lights", totals.lights, Color(255,230,120))
+    Stat(parent, 0, 78, 116, 62, "Total", totals.all, th.orange)
+    Stat(parent, 126, 78, 116, 62, "Owned", totals.owned, th.success)
+    Stat(parent, 252, 78, 116, 62, "Unknown", totals.unknown, totals.unknown > 0 and th.warning or th.success)
+    Stat(parent, 378, 78, 116, 62, "Props", totals.props, Color(90,220,120))
+    Stat(parent, 504, 78, 116, 62, "Vehicles", totals.vehicles, th.blue)
+    Stat(parent, 630, 78, 116, 62, "Wire", totals.wire, Color(80,200,255))
+    Stat(parent, 756, 78, 116, 62, "Lights", totals.lights, Color(255,230,120))
 
-    local searchPanel = Box(parent, 0, 172, 876, 56, nil, function(_, w, h)
+    local searchPanel = Box(parent, 0, 152, 876, 52, nil, function(_, w, h)
         draw.SimpleText("Search", "MN_Text", 16, h / 2, th.muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end)
     local search = vgui.Create("DTextEntry", searchPanel)
-    search:SetPos(86, 11)
-    search:SetSize(500, 34)
+    search:SetPos(86, 10)
+    search:SetSize(500, 32)
     search:SetFont("MN_Text")
     search:SetText(searchText)
     search:SetPlaceholderText("Player name or SteamID...")
     search:SetUpdateOnType(true)
     search.OnValueChange = function(_, value)
         searchText = value or ""
-        timer.Create("MemoNetwork_BuildManager_Search", 0.15, 1, function()
-            if IsValid(parent) then Build(parent) end
-        end)
+        timer.Create("MemoNetwork_BuildManager_Search", 0.15, 1, function() if IsValid(parent) then BuildUnsafe(parent) end end)
     end
-    Button(searchPanel, 606, 11, 120, 34, "Clear", "", function() searchText = "" Build(parent) end)
-    Button(searchPanel, 740, 11, 120, 34, "Refresh", "", function() Build(parent) end)
+    Button(searchPanel, 606, 10, 120, 32, "Clear", "", function() searchText = "" BuildUnsafe(parent) end)
+    Button(searchPanel, 740, 10, 120, 32, "Refresh", "", function() BuildUnsafe(parent) end)
 
-    local playersBox = Box(parent, 0, 244, 360, 430, nil, function(_, w, h)
+    local playersBox = Box(parent, 0, 216, 360, 350, nil, function(_, w, h)
         draw.SimpleText("Builders", "MN_Subtitle", 16, 24, th.text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         draw.SimpleText(#visible .. " shown / " .. #groups .. " owners", "MN_Small", 16, 50, th.muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end)
 
     local scroll = vgui.Create("DScrollPanel", playersBox)
     scroll:SetPos(14, 72)
-    scroll:SetSize(332, 342)
+    scroll:SetSize(332, 262)
 
     local y = 0
     for _, group in ipairs(visible) do
         local row = vgui.Create("DButton", scroll)
         row:SetPos(0, y)
-        row:SetSize(314, 68)
+        row:SetSize(314, 62)
         row:SetText("")
         row:SetCursor("hand")
         row.HoverAmount = 0
@@ -303,62 +279,65 @@ local function Build(parent)
             local selectedRow = selectedSteamID == group.steamID
             draw.RoundedBox(10, 0, 0, w, h, selectedRow and Color(34,45,55,245) or Color(18 + self.HoverAmount * 8, 24 + self.HoverAmount * 8, 32 + self.HoverAmount * 8, 238))
             draw.RoundedBox(6, 0, 0, selectedRow and 8 or 5, h, group.steamID == "unknown" and th.warning or th.orange)
-            draw.SimpleText(group.ownerName or "Unknown", "MN_Text", 18, 20, th.text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-            draw.SimpleText(group.steamID or "unknown", "MN_Small", 18, 43, th.muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText(group.ownerName or "Unknown", "MN_Text", 18, 18, th.text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText(group.steamID or "unknown", "MN_Small", 18, 40, th.muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
             draw.SimpleText(group.counts.all .. " ent", "MN_Subtitle", w - 16, 24, th.orange, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
         end
-        row.DoClick = function()
-            selectedSteamID = group.steamID
-            Build(parent)
-        end
-        y = y + 76
+        row.DoClick = function() selectedSteamID = group.steamID BuildUnsafe(parent) end
+        y = y + 70
     end
 
-    local detail = Box(parent, 380, 244, 496, 430, selected and (selected.steamID == "unknown" and th.warning or th.orange) or th.orange, function(_, w, h)
-        draw.SimpleText("Build Details", "MN_Subtitle", 20, 26, th.text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    local detail = Box(parent, 380, 216, 496, 350, selected and (selected.steamID == "unknown" and th.warning or th.orange) or th.orange, function(_, w, h)
+        draw.SimpleText("Build Details", "MN_Subtitle", 20, 24, th.text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         if not selected then
             draw.SimpleText("No build owner selected", "MN_Text", 20, 70, th.muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
             return
         end
-        draw.SimpleText(selected.ownerName or "Unknown", "MN_Title", 20, 76, th.text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText(selected.steamID or "unknown", "MN_Text", 20, 112, th.muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText("Total entities: " .. selected.counts.all, "MN_Subtitle", 20, 154, th.orange, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(selected.ownerName or "Unknown", "MN_Title", 20, 70, th.text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(selected.steamID or "unknown", "MN_Text", 20, 104, th.muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("Total entities: " .. selected.counts.all, "MN_Subtitle", 20, 140, th.orange, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end)
 
     if selected then
-        Stat(detail, 20, 186, 96, 58, "Props", selected.counts.props, Color(90,220,120))
-        Stat(detail, 126, 186, 96, 58, "Vehicles", selected.counts.vehicles, th.blue)
-        Stat(detail, 232, 186, 96, 58, "Wire", selected.counts.wire, Color(80,200,255))
-        Stat(detail, 338, 186, 96, 58, "Lights", selected.counts.lights, Color(255,230,120))
-        Stat(detail, 20, 256, 96, 58, "NPCs", selected.counts.npcs, th.danger)
-        Stat(detail, 126, 256, 96, 58, "Ragdolls", selected.counts.ragdolls, th.warning)
-        Stat(detail, 232, 256, 96, 58, "Effects", selected.counts.effects, th.purple)
-        Stat(detail, 338, 256, 96, 58, "Other", selected.counts.other, th.muted)
+        Stat(detail, 20, 166, 96, 54, "Props", selected.counts.props, Color(90,220,120))
+        Stat(detail, 126, 166, 96, 54, "Vehicles", selected.counts.vehicles, th.blue)
+        Stat(detail, 232, 166, 96, 54, "Wire", selected.counts.wire, Color(80,200,255))
+        Stat(detail, 338, 166, 96, 54, "Lights", selected.counts.lights, Color(255,230,120))
+        Stat(detail, 20, 230, 96, 54, "NPCs", selected.counts.npcs, th.danger)
+        Stat(detail, 126, 230, 96, 54, "Ragdolls", selected.counts.ragdolls, th.warning)
+        Stat(detail, 232, 230, 96, 54, "Effects", selected.counts.effects, th.purple)
+        Stat(detail, 338, 230, 96, 54, "Other", selected.counts.other, th.muted)
 
-        Button(detail, 20, 336, 104, 42, "Goto", "Player", function() SendTargetAction("teleport", selected.owner) end)
-        Button(detail, 134, 336, 104, 42, "Bring", "Player", function() SendTargetAction("bring", selected.owner) end)
-        Button(detail, 248, 336, 104, 42, "Heal", "Player", function() SendTargetAction("heal_target", selected.owner) end)
-        Button(detail, 362, 336, 104, 42, "Refresh", "", function() Build(parent) end)
-        Button(detail, 20, 386, 218, 34, "Cleanup Player", "Coming next", function() Notify("Per-player cleanup server action comes in the next Alpha 19 step.", "warning") end, true)
-        Button(detail, 248, 386, 218, 34, "Freeze/Unfreeze", "Coming next", function() Notify("Freeze tools come in the next Alpha 19 step.", "warning") end)
+        Button(detail, 20, 298, 104, 36, "Goto", "Player", function() SendTargetAction("teleport", selected.owner) end)
+        Button(detail, 134, 298, 104, 36, "Bring", "Player", function() SendTargetAction("bring", selected.owner) end)
+        Button(detail, 248, 298, 104, 36, "Heal", "Player", function() SendTargetAction("heal_target", selected.owner) end)
+        Button(detail, 362, 298, 104, 36, "Refresh", "", function() BuildUnsafe(parent) end)
     end
 
-    local entBox = Box(parent, 0, 692, 876, 150, nil, function(_, w, h)
-        draw.SimpleText("Selected Build Entities", "MN_Subtitle", 16, 24, th.text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText("First 6 entities for quick inspection", "MN_Small", 16, 48, th.muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    local entBox = Box(parent, 0, 582, 876, 126, nil, function(_, w, h)
+        draw.SimpleText("Selected Build Entities", "MN_Subtitle", 16, 22, th.text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("First entities for quick inspection", "MN_Small", 16, 46, th.muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end)
 
     if selected then
         local ex = 16
         for i = 1, math.min(6, #selected.entities) do
             local ent = selected.entities[i]
-            Box(entBox, ex, 70, 132, 60, nil, function(_, w, h)
-                draw.SimpleText(EntityType(ent), "MN_Small", 10, 15, th.orange, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-                draw.SimpleText(ModelName(ent), "MN_Small", 10, 35, th.text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-                draw.SimpleText("age " .. SpawnAge(ent), "MN_Small", 10, 51, th.muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            Box(entBox, ex, 62, 132, 48, nil, function(_, w, h)
+                draw.SimpleText(EntityType(ent), "MN_Small", 10, 13, th.orange, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                draw.SimpleText(ModelName(ent), "MN_Small", 10, 29, th.text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                draw.SimpleText("age " .. SpawnAge(ent), "MN_Small", 10, 42, th.muted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
             end)
             ex = ex + 142
         end
+    end
+end
+
+local function Build(parent)
+    local ok, err = pcall(BuildUnsafe, parent)
+    if not ok then
+        MsgC(Color(255,145,0), "[MemoNetwork Build Manager] ", Color(255,90,90), tostring(err) .. "\n")
+        DrawError(parent, err)
     end
 end
 
@@ -367,9 +346,7 @@ function MemoNetwork.BuildManager.Open()
     if IsValid(frame) then frame:Remove() frame = nil return end
 
     local th = Theme()
-    local w, h = 940, 920
-    w = math.min(w, ScrW() - 60)
-    h = math.min(h, ScrH() - 60)
+    local w, h = math.min(940, ScrW() - 60), math.min(820, ScrH() - 60)
 
     frame = vgui.Create("DFrame")
     frame:SetSize(w, h)
@@ -384,7 +361,7 @@ function MemoNetwork.BuildManager.Open()
         draw.RoundedBox(14, 0, 0, pw, ph, th.bg)
         draw.RoundedBoxEx(14, 0, 0, pw, 78, th.orange, true, true, false, false)
         draw.SimpleText("MemoNetwork Build Manager", "MN_Title", 26, 27, Color(10,10,10), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText("Alpha 19.0", "MN_Text", 26, 55, Color(25,25,25), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("Alpha 19.0.1", "MN_Text", 26, 55, Color(25,25,25), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end
 
     local close = vgui.Create("DButton", frame)
@@ -397,9 +374,10 @@ function MemoNetwork.BuildManager.Open()
     end
     close.DoClick = function() frame:Remove() frame = nil end
 
-    local content = vgui.Create("DScrollPanel", frame)
+    local content = vgui.Create("DPanel", frame)
     content:SetPos(32, 100)
-    content:SetSize(w - 64, h - 124)
+    content:SetSize(876, 708)
+    content.Paint = function() end
     content.Rebuild = function(self) Build(self) end
     Build(content)
 end
@@ -407,7 +385,5 @@ end
 concommand.Add("mn_builds", MemoNetwork.BuildManager.Open)
 
 hook.Add("PlayerButtonDown", "MemoNetwork_BuildManager_F10", function(ply, button)
-    if ply == LocalPlayer() and button == KEY_F10 then
-        MemoNetwork.BuildManager.Open()
-    end
+    if ply == LocalPlayer() and button == KEY_F10 then MemoNetwork.BuildManager.Open() end
 end)
