@@ -1,4 +1,4 @@
--- MemoNetwork Alpha 20 Loader
+-- MemoNetwork Alpha 20.1 Loader
 
 MemoNetwork = MemoNetwork or {}
 
@@ -56,6 +56,7 @@ AddClient("memonetwork/client/cl_admin_dashboard2.lua")
 AddClient("memonetwork/client/cl_control_center.lua")
 AddClient("memonetwork/client/cl_map_manager.lua")
 AddClient("memonetwork/client/cl_admin.lua")
+AddClient("memonetwork/client/cl_f6_hub.lua")
 
 AddServer("memonetwork/server/sv_commands.lua")
 AddServer("memonetwork/server/sv_welcome.lua")
