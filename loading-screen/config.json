@@ -1,16 +1,16 @@
 {
   "serverName": "MemoNetwork",
   "subtitle": "Industrial Sandbox",
-  "version": "Alpha 18",
+  "version": "Alpha 19",
   "discord": "https://memocraft.nl/?c=Discord",
   "website": "https://memocraft.nl",
   "workshop": "#",
-  "motd": "Welcome to MemoNetwork Alpha 18. Build, test and manage the Industrial Sandbox.",
+  "motd": "Welcome to MemoNetwork Alpha 19. Build, inspect and manage the Industrial Sandbox.",
   "news": [
-    "Alpha 18 Build Manager preparation",
-    "F8 Control Center stable rebuild",
-    "F9 Map Manager",
-    "Build Assistant",
-    "Sandbox admin tools"
+    "Alpha 19 Build Manager",
+    "Accurate prop ownership tracking",
+    "F10 build overview",
+    "Live build statistics per player",
+    "Improved Build Assistant"
   ]
 }
