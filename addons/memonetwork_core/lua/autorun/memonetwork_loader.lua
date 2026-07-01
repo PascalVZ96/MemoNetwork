@@ -1,4 +1,4 @@
--- MemoNetwork Alpha 24 Loader
+-- MemoNetwork Alpha 25 Loader
 
 MemoNetwork = MemoNetwork or {}
 
@@ -56,6 +56,7 @@ AddClient("memonetwork/client/cl_world_manager.lua")
 AddClient("memonetwork/client/cl_intelligence.lua")
 AddClient("memonetwork/client/cl_command_center.lua")
 AddClient("memonetwork/client/cl_build_editor.lua")
+AddClient("memonetwork/client/cl_monitoring.lua")
 AddClient("memonetwork/client/cl_admin_dashboard2.lua")
 AddClient("memonetwork/client/cl_control_center.lua")
 AddClient("memonetwork/client/cl_map_manager.lua")
@@ -71,3 +72,4 @@ AddServer("memonetwork/server/sv_ownership.lua")
 AddServer("memonetwork/server/sv_physgun.lua")
 AddServer("memonetwork/server/sv_build_tools.lua")
 AddServer("memonetwork/server/sv_timeline.lua")
+AddServer("memonetwork/server/sv_automation.lua")
